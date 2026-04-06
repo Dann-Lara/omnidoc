@@ -2,6 +2,7 @@
   "name": "omnidoc",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "turbo run dev",
     "dev:web": "turbo run dev --filter=web",
@@ -13,7 +14,7 @@
     "test:e2e": "turbo run test:e2e",
     "db:migrate": "turbo run db:migrate",
     "db:seed": "turbo run db:seed",
-    "setup": "npm install && npm run db:migrate && npm run db:seed",
+    "setup": "pnpm install && pnpm run db:migrate && pnpm run db:seed",
     "docker:up": "docker compose -f infra/docker/docker-compose.yml up -d",
     "docker:down": "docker compose -f infra/docker/docker-compose.yml down"
   },
