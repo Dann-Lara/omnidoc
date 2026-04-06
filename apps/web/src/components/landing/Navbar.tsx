@@ -1,43 +1,44 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Globe, Moon, Sun } from "lucide-react";
-import { useTheme } from "next-themes";
-import { useLanguage } from "@/lib/context/LanguageContext";
+import { useState, useEffect, useSyncExternalStore } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Menu, X, Globe, Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { useLanguage } from '@/lib/context/LanguageContext';
 
 const translations = {
   en: {
-    features: "Features",
-    security: "Security",
-    pricing: "Pricing",
-    getStarted: "Get Started",
+    features: 'Features',
+    security: 'Security',
+    pricing: 'Pricing',
+    getStarted: 'Get Started',
   },
   es: {
-    features: "Características",
-    security: "Seguridad",
-    pricing: "Precios",
-    getStarted: "Comenzar",
+    features: 'Características',
+    security: 'Seguridad',
+    pricing: 'Precios',
+    getStarted: 'Comenzar',
   },
 };
+
+const emptySubscribe = () => () => {};
+const getSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const { lang, toggleLang } = useLanguage();
-  const { theme, setTheme } = useTheme();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const mounted = useSyncExternalStore(emptySubscribe, getSnapshot, getServerSnapshot);
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const t = translations[lang];
@@ -47,12 +48,11 @@ export function Navbar() {
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? "glass shadow-sm" : "bg-transparent"
+        isScrolled ? 'glass shadow-sm' : 'bg-transparent'
       }`}
     >
       <nav className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex justify-between items-center">
-          {/* Logo */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -61,16 +61,13 @@ export function Navbar() {
             OmniDoc
           </motion.div>
 
-          {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
             <NavLink href="#features">{t.features}</NavLink>
             <NavLink href="#security">{t.security}</NavLink>
             <NavLink href="#pricing">{t.pricing}</NavLink>
           </div>
 
-          {/* Right Actions */}
           <div className="flex items-center gap-4">
-            {/* Language Switcher */}
             <button
               onClick={toggleLang}
               className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-container transition-colors"
@@ -79,13 +76,12 @@ export function Navbar() {
               <span className="text-sm font-medium uppercase">{lang}</span>
             </button>
 
-            {/* Theme Toggle */}
             {mounted && (
               <button
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
                 className="p-2 rounded-lg hover:bg-surface-container transition-colors"
               >
-                {theme === "dark" ? (
+                {resolvedTheme === 'dark' ? (
                   <Sun className="w-5 h-5" />
                 ) : (
                   <Moon className="w-5 h-5" />
@@ -93,7 +89,6 @@ export function Navbar() {
               </button>
             )}
 
-            {/* CTA Button */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -102,7 +97,6 @@ export function Navbar() {
               {t.getStarted}
             </motion.button>
 
-            {/* Mobile Menu Toggle */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="md:hidden p-2"
@@ -116,12 +110,11 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
+              animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               className="md:hidden pt-4 pb-2"
             >

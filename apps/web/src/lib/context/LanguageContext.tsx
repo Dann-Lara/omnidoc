@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode } from 'react';
 
-type Lang = "en" | "es";
+type Lang = 'en' | 'es';
 
 interface LanguageContextType {
   lang: Lang;
@@ -12,17 +12,17 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+function getInitialLang(): Lang {
+  if (typeof window !== 'undefined') {
+    return navigator.language.startsWith('es') ? 'es' : 'en';
+  }
+  return 'en';
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLang] = useState<Lang>("en");
-  const [mounted, setMounted] = useState(false);
+  const [lang, setLang] = useState<Lang>(getInitialLang);
 
-  useEffect(() => {
-    setMounted(true);
-    const browserLang = navigator.language.startsWith("es") ? "es" : "en";
-    setLang(browserLang);
-  }, []);
-
-  const toggleLang = () => setLang(lang === "en" ? "es" : "en");
+  const toggleLang = () => setLang(lang === 'en' ? 'es' : 'en');
 
   return (
     <LanguageContext.Provider value={{ lang, setLang, toggleLang }}>
@@ -34,7 +34,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 export function useLanguage() {
   const context = useContext(LanguageContext);
   if (!context) {
-    throw new Error("useLanguage must be used within LanguageProvider");
+    throw new Error('useLanguage must be used within LanguageProvider');
   }
   return context;
 }
