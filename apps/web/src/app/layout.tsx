@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { Manrope, Inter } from 'next/font/google';
-import { ClerkProvider } from '@clerk/nextjs';
 import { LanguageProvider } from '@/lib/context/LanguageContext';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { ClerkWrapper } from '@/components/ClerkWrapper';
 import './globals.css';
 
 const manrope = Manrope({
@@ -45,7 +45,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkWrapper>
       <html lang="en" suppressHydrationWarning>
         <body
           className={`${manrope.variable} ${inter.variable} antialiased min-h-screen flex flex-col`}
@@ -57,6 +57,6 @@ export default function RootLayout({
           </LanguageProvider>
         </body>
       </html>
-    </ClerkProvider>
+    </ClerkWrapper>
   );
 }
