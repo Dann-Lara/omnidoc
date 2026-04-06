@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Manrope, Inter } from 'next/font/google';
+import { ClerkProvider } from '@clerk/nextjs';
 import { LanguageProvider } from '@/lib/context/LanguageContext';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import './globals.css';
@@ -44,16 +45,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${manrope.variable} ${inter.variable} antialiased min-h-screen flex flex-col`}
-      >
-        <LanguageProvider>
-          <ThemeProvider>
-            {children}
-          </ThemeProvider>
-        </LanguageProvider>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" suppressHydrationWarning>
+        <body
+          className={`${manrope.variable} ${inter.variable} antialiased min-h-screen flex flex-col`}
+        >
+          <LanguageProvider>
+            <ThemeProvider>
+              {children}
+            </ThemeProvider>
+          </LanguageProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { ArrowRight, Phone } from "lucide-react";
@@ -67,22 +68,30 @@ export function CTASection({ lang }: CTASectionProps) {
               transition={{ delay: 0.4 }}
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
-              <motion.button
+              <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="bg-white text-primary px-10 py-4 rounded-xl font-bold text-lg shadow-xl"
               >
-                {t.ctaPrimary}
-                <ArrowRight className="inline-block ml-2 w-5 h-5" />
-              </motion.button>
-              <motion.button
+                <Link
+                  href="/signup"
+                  className="bg-white text-primary px-10 py-4 rounded-xl font-bold text-lg shadow-xl inline-block"
+                >
+                  {t.ctaPrimary}
+                  <ArrowRight className="inline-block ml-2 w-5 h-5" />
+                </Link>
+              </motion.div>
+              <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="bg-transparent border-2 border-white/30 text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-white/10 transition-colors"
               >
-                <Phone className="inline-block mr-2 w-5 h-5" />
-                {t.ctaSecondary}
-              </motion.button>
+                <Link
+                  href="/login"
+                  className="bg-transparent border-2 border-white/30 text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-white/10 transition-colors inline-block"
+                >
+                  <Phone className="inline-block mr-2 w-5 h-5" />
+                  {t.ctaSecondary}
+                </Link>
+              </motion.div>
             </motion.div>
           </div>
         </div>

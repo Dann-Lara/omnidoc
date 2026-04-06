@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect, useSyncExternalStore } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Globe, Moon, Sun } from 'lucide-react';
@@ -12,12 +13,14 @@ const translations = {
     security: 'Security',
     pricing: 'Pricing',
     getStarted: 'Get Started',
+    signIn: 'Sign In',
   },
   es: {
     features: 'Características',
     security: 'Seguridad',
     pricing: 'Precios',
     getStarted: 'Comenzar',
+    signIn: 'Iniciar Sesión',
   },
 };
 
@@ -88,13 +91,25 @@ export function Navbar() {
               </button>
             )}
 
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="hidden md:block clinical-gradient text-on-primary px-5 py-2 rounded-lg font-semibold text-sm"
-            >
-              {t.getStarted}
-            </motion.button>
+            <motion.div className="hidden md:flex items-center gap-3">
+              <Link
+                href="/login"
+                className="px-4 py-2 font-semibold text-sm text-on-surface-variant hover:text-primary transition-colors"
+              >
+                {t.signIn}
+              </Link>
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Link
+                  href="/signup"
+                  className="clinical-gradient text-on-primary px-5 py-2 rounded-lg font-semibold text-sm inline-block"
+                >
+                  {t.getStarted}
+                </Link>
+              </motion.div>
+            </motion.div>
 
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -127,9 +142,16 @@ export function Navbar() {
                 <MobileNavLink href="#pricing" onClick={() => setIsMobileMenuOpen(false)}>
                   {t.pricing}
                 </MobileNavLink>
-                <button className="clinical-gradient text-on-primary px-5 py-3 rounded-lg font-semibold text-sm mt-2">
+                <MobileNavLink href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                  {t.signIn}
+                </MobileNavLink>
+                <Link
+                  href="/signup"
+                  className="clinical-gradient text-on-primary px-5 py-3 rounded-lg font-semibold text-sm mt-2 text-center"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
                   {t.getStarted}
-                </button>
+                </Link>
               </div>
             </motion.div>
           )}

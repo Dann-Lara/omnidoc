@@ -25,6 +25,7 @@ const content = {
           "Email support",
         ],
         cta: "Get Started Free",
+        popular: false,
       },
       basic: {
         name: "Professional",
@@ -56,6 +57,7 @@ const content = {
           "HIPAA compliance",
         ],
         cta: "Contact Sales",
+        popular: false,
       },
     },
   },
@@ -75,6 +77,7 @@ const content = {
           "Soporte por email",
         ],
         cta: "Comenzar Gratis",
+        popular: false,
       },
       basic: {
         name: "Profesional",
@@ -106,6 +109,7 @@ const content = {
           "Cumplimiento HIPAA",
         ],
         cta: "Contactar Ventas",
+        popular: false,
       },
     },
   },
