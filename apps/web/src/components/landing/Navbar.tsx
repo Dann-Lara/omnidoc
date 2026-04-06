@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Globe, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useLanguage } from "@/lib/context/LanguageContext";
 
 const translations = {
   en: {
@@ -24,13 +25,11 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [lang, setLang] = useState<"en" | "es">("en");
+  const { lang, toggleLang } = useLanguage();
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     setMounted(true);
-    const browserLang = navigator.language.startsWith("es") ? "es" : "en";
-    setLang(browserLang);
   }, []);
 
   useEffect(() => {
@@ -73,7 +72,7 @@ export function Navbar() {
           <div className="flex items-center gap-4">
             {/* Language Switcher */}
             <button
-              onClick={() => setLang(lang === "en" ? "es" : "en")}
+              onClick={toggleLang}
               className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-container transition-colors"
             >
               <Globe className="w-4 h-4" />

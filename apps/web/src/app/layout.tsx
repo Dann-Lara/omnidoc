@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { LanguageProvider } from "@/lib/context/LanguageContext";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -48,7 +49,9 @@ export default function RootLayout({
         className={`${manrope.variable} ${inter.variable} antialiased min-h-screen flex flex-col`}
       >
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          {children}
+          <LanguageProvider>
+            {children}
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

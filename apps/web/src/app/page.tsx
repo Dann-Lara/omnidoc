@@ -1,25 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useLanguage } from "@/lib/context/LanguageContext";
 import { Navbar, Hero, Features, Pricing, CTASection, Footer } from "@/components/landing";
 
 export default function LandingPage() {
-  const [lang, setLang] = useState<"en" | "es">("en");
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const browserLang = navigator.language.startsWith("es") ? "es" : "en";
-    setLang(browserLang);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+  const { lang } = useLanguage();
 
   return (
     <div className="min-h-screen flex flex-col bg-surface">
