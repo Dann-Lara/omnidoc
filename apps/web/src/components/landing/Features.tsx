@@ -2,7 +2,7 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
-import { Calendar, Brain, Stethoscope, Shield, ArrowRight, CheckCircle, AlertTriangle } from "lucide-react";
+import { Calendar, Brain, Stethoscope, Shield, ArrowRight } from "lucide-react";
 
 interface FeaturesProps {
   lang: "en" | "es";
