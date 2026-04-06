@@ -1,0 +1,213 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrganizationType {
+  INDIVIDUAL
+  CLINIC
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+  NO_SHOW
+}
+
+model Organization {
+  id                 String             @id @default(uuid())
+  name               String
+  slug               String             @unique
+  type               OrganizationType
+  planId             String?
+  features           Json               @default("{}")
+  branding           Json               @default("{}")
+  settings           Json               @default("{}")
+  subscriptionStatus SubscriptionStatus @default(TRIALING)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  users        User[]
+  roles        Role[]
+  appointments Appointment[]
+  patients     Patient[]
+  auditLogs    AuditLog[]
+  subscription Subscription?
+  invitations  Invitation[]
+
+  @@index([slug])
+  @@index([subscriptionStatus])
+}
+
+model User {
+  id             String    @id @default(uuid())
+  clerkId        String    @unique
+  organizationId String
+  roleId         String
+  email          String
+  firstName      String
+  lastName       String
+  specialty      String?
+  isTenantAdmin  Boolean   @default(false)
+  apiKey         String?
+  settings       Json      @default("{}")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization        Organization  @relation(fields: [organizationId], references: [id])
+  role               Role          @relation(fields: [roleId], references: [id])
+  doctorAppointments Appointment[] @relation("DoctorAppointments")
+
+  @@index([organizationId])
+  @@index([clerkId])
+  @@index([email])
+}
+
+model Role {
+  id             String    @id @default(uuid())
+  organizationId String
+  name           String
+  permissions    String[]
+  isDefault      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  users        User[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model Subscription {
+  id                    String    @id @default(uuid())
+  organizationId        String    @unique
+  stripeSubscriptionId  String    @unique
+  stripeCustomerId      String    @unique
+  planId                String
+  status                String
+  currentPeriodStart    DateTime
+  currentPeriodEnd      DateTime
+  features              Json      @default("{}")
+  createdAt             DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([stripeCustomerId])
+  @@index([status])
+}
+
+model Plan {
+  id            String    @id @default(uuid())
+  name          String
+  stripePriceId String    @unique
+  price         Decimal   @db.Decimal(10, 2)
+  features      Json      @default("{}")
+  limits        Json      @default("{}")
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+
+  @@index([isActive])
+}
+
+model Appointment {
+  id             String            @id @default(uuid())
+  organizationId String
+  patientId      String
+  doctorId       String
+  scheduledAt    DateTime
+  duration       Int
+  status         AppointmentStatus @default(SCHEDULED)
+  type           String
+  notes          String?
+  aiPredictions  Json?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  patient      Patient     @relation(fields: [patientId], references: [id])
+  doctor       User        @relation("DoctorAppointments", fields: [doctorId], references: [id])
+
+  @@index([organizationId])
+  @@index([doctorId])
+  @@index([patientId])
+  @@index([scheduledAt])
+  @@index([status])
+}
+
+model Patient {
+  id             String    @id @default(uuid())
+  organizationId String
+  firstName      String
+  lastName       String
+  email          String?
+  phone          String?
+  dateOfBirth    DateTime?
+  medicalHistory Json      @default("{}")
+  createdAt      DateTime  @default(now())
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  appointments Appointment[]
+
+  @@index([organizationId])
+  @@index([email])
+  @@index([phone])
+}
+
+model AuditLog {
+  id             String    @id @default(uuid())
+  organizationId String
+  userId         String
+  action         String
+  resourceType   String
+  resourceId     String?
+  metadata       Json?
+  ipAddress      String?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+model Invitation {
+  id             String           @id @default(uuid())
+  token          String           @unique
+  email          String
+  organizationId String?
+  role           String
+  status         InvitationStatus @default(PENDING)
+  expiresAt      DateTime
+  createdBy      String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([token])
+  @@index([email])
+  @@index([status])
+}
