@@ -13,7 +13,7 @@
     "test:e2e": "turbo run test:e2e",
     "db:migrate": "turbo run db:migrate",
     "db:seed": "turbo run db:seed",
-    "setup": "pnpm install && pnpm db:migrate && pnpm db:seed",
+    "setup": "npm install && npm run db:migrate && npm run db:seed",
     "docker:up": "docker compose -f infra/docker/docker-compose.yml up -d",
     "docker:down": "docker compose -f infra/docker/docker-compose.yml down"
   },
@@ -22,9 +22,7 @@
     "turbo": "^2.0.0",
     "typescript": "^5.4.0"
   },
-  "packageManager": "pnpm@9.0.0",
   "engines": {
-    "node": ">=20",
-    "pnpm": ">=9"
+    "node": ">=20"
   }
 }

@@ -1,0 +1,142 @@
+{
+  "navbar": {
+    "features": "Features",
+    "security": "Security",
+    "pricing": "Pricing",
+    "getStarted": "Get Started"
+  },
+  "hero": {
+    "badge": "Now with V2 Core Engine",
+    "title": "The Sovereign Operating System for Clinical Growth.",
+    "subtitle": "Designed for high-performance healthcare environments. Orchestrate complex workflows with medical-grade precision and unmatched scalability.",
+    "cta": {
+      "primary": "Request Demo",
+      "secondary": "Contact Sales"
+    },
+    "stats": {
+      "specialties": "Medical Specialties",
+      "supported": "Supported"
+    },
+    "features": [
+      {
+        "title": "Atomic Scalability",
+        "description": "One chair to multi-city clusters."
+      },
+      {
+        "title": "Privacy by Design",
+        "description": "Zero-friction compliance logic."
+      }
+    ]
+  },
+  "socialProof": {
+    "title": "Scale from one chair to fifty specialties.",
+    "subtitle": "OmniDoc adapts to your growth velocity without requiring a system migration.",
+    "stats": [
+      { "value": "2.4M+", "label": "Daily Appointments" },
+      { "value": "99.9%", "label": "Uptime SLA" }
+    ]
+  },
+  "features": {
+    "sectionTitle": "Precision-Engineered Components",
+    "sectionSubtitle": "Clinical Infrastructure",
+    "superAgenda": {
+      "title": "The Súper Agenda",
+      "description": "Spatial and professional synchronization. Manage physical rooms, specialized equipment, and medical staff availability in a single, unified view."
+    },
+    "aiAntiNoShow": {
+      "title": "IA Anti-NoShow",
+      "description": "Predictive rescheduling that identifies patterns before they become vacancies. Optimize your clinical density automatically.",
+      "stat": {
+        "value": "42%",
+        "label": "Reduction in missed slots"
+      }
+    },
+    "smartTriage": {
+      "title": "Smart Triage",
+      "description": "Dynamic patient intake that adapts to symptoms. Route cases to the right specialist instantly with automated urgency tagging.",
+      "alert": {
+        "title": "High Urgency Detected",
+        "action": "Routing to Cardiology Dept."
+      }
+    },
+    "privacy": {
+      "title": "The Handshake Protocol",
+      "description": "On-demand support access with zero privacy friction. Secure, time-limited, and audited sessions that protect patient data while you get help.",
+      "cta": "Read technical whitepaper"
+    }
+  },
+  "pricing": {
+    "sectionTitle": "Simple, Transparent Pricing",
+    "sectionSubtitle": "Choose the plan that fits your practice",
+    "plans": {
+      "free": {
+        "name": "Starter",
+        "description": "Perfect for solo practitioners getting started",
+        "price": "0",
+        "period": "/month",
+        "features": [
+          "Up to 100 appointments/month",
+          "Basic scheduling",
+          "1 user",
+          "Email support"
+        ],
+        "cta": "Get Started Free"
+      },
+      "basic": {
+        "name": "Professional",
+        "description": "For growing clinics and practices",
+        "price": "49",
+        "period": "/month",
+        "features": [
+          "Unlimited appointments",
+          "AI-powered scheduling",
+          "Up to 10 users",
+          "Patient management",
+          "Priority support",
+          "Analytics dashboard"
+        ],
+        "cta": "Start Free Trial",
+        "popular": true
+      },
+      "enterprise": {
+        "name": "Enterprise",
+        "description": "For hospitals and healthcare networks",
+        "price": "Custom",
+        "period": "",
+        "features": [
+          "Everything in Professional",
+          "Unlimited users",
+          "Custom integrations",
+          "Dedicated account manager",
+          "SLA guarantee",
+          "HIPAA compliance"
+        ],
+        "cta": "Contact Sales"
+      }
+    }
+  },
+  "cta": {
+    "title": "Ready to modernize your clinical architecture?",
+    "subtitle": "Join 400+ leading medical institutions using OmniDoc to power their patient journeys.",
+    "buttons": {
+      "primary": "Book a Demo",
+      "secondary": "Contact Sales"
+    }
+  },
+  "footer": {
+    "tagline": "Providing the infrastructure for the next generation of medical excellence.",
+    "product": "Product",
+    "company": "Company",
+    "network": "Network",
+    "links": {
+      "documentation": "Documentation",
+      "security": "Security Compliance",
+      "support": "Support",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "about": "About Us"
+    },
+    "copyright": "© 2024 OmniDoc Clinical Systems. All rights reserved.",
+    "status": "All Systems Operational"
+  }
+}

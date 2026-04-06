@@ -1,0 +1,142 @@
+{
+  "navbar": {
+    "features": "Características",
+    "security": "Seguridad",
+    "pricing": "Precios",
+    "getStarted": "Comenzar"
+  },
+  "hero": {
+    "badge": "Ahora con Motor Central V2",
+    "title": "El Sistema Operativo Soberano para el Crecimiento Clínico.",
+    "subtitle": "Diseñado para entornos sanitarios de alto rendimiento. Orchestration de flujos de trabajo complejos con precisión médica y escalabilidad inigualable.",
+    "cta": {
+      "primary": "Solicitar Demo",
+      "secondary": "Contactar Ventas"
+    },
+    "stats": {
+      "specialties": "Especialidades Médicas",
+      "supported": "Soportadas"
+    },
+    "features": [
+      {
+        "title": "Escalabilidad Atómica",
+        "description": "De una silla a clusters multiciudad."
+      },
+      {
+        "title": "Privacidad por Diseño",
+        "description": "Lógica de cumplimiento sin fricción."
+      }
+    ]
+  },
+  "socialProof": {
+    "title": "Escala de una silla a cincuenta especialidades.",
+    "subtitle": "OmniDoc se adapta a tu velocidad de crecimiento sin requerir migración del sistema.",
+    "stats": [
+      { "value": "2.4M+", "label": "Citas Diarias" },
+      { "value": "99.9%", "label": "SLA de Disponibilidad" }
+    ]
+  },
+  "features": {
+    "sectionTitle": "Componentes de Precisión",
+    "sectionSubtitle": "Infraestructura Clínica",
+    "superAgenda": {
+      "title": "La Súper Agenda",
+      "description": "Sincronización espacial y profesional. Gestiona salas físicas, equipos especializados y disponibilidad del personal médico en una vista unificada."
+    },
+    "aiAntiNoShow": {
+      "title": "IA Anti-Ausencias",
+      "description": "Reprogramación predictiva que identifica patrones antes de que se conviertan en vacantes. Optimiza tu densidad clínica automáticamente.",
+      "stat": {
+        "value": "42%",
+        "label": "Reducción de citas perdidas"
+      }
+    },
+    "smartTriage": {
+      "title": "Triaje Inteligente",
+      "description": "Admisión dinámica de pacientes que se adapta a los síntomas. Dirige casos al especialista correcto instantáneamente con etiquetado automático de urgencia.",
+      "alert": {
+        "title": "Alta Urgencia Detectada",
+        "action": "Dirigiendo a Cardiología"
+      }
+    },
+    "privacy": {
+      "title": "El Protocolo de Handshake",
+      "description": "Acceso de soporte bajo demanda sin fricción de privacidad. Sesiones seguras, limitadas en tiempo y auditadas que protegen los datos de los pacientes mientras obtienes ayuda.",
+      "cta": "Leer whitepaper técnico"
+    }
+  },
+  "pricing": {
+    "sectionTitle": "Precios Simples y Transparentes",
+    "sectionSubtitle": "Elige el plan que se adapte a tu práctica",
+    "plans": {
+      "free": {
+        "name": "Inicial",
+        "description": "Perfecto para profesionales independientes que comienzan",
+        "price": "0",
+        "period": "/mes",
+        "features": [
+          "Hasta 100 citas/mes",
+          "Programación básica",
+          "1 usuario",
+          "Soporte por email"
+        ],
+        "cta": "Comenzar Gratis"
+      },
+      "basic": {
+        "name": "Profesional",
+        "description": "Para clínicas y consultorios en crecimiento",
+        "price": "49",
+        "period": "/mes",
+        "features": [
+          "Citas ilimitadas",
+          "Programación con IA",
+          "Hasta 10 usuarios",
+          "Gestión de pacientes",
+          "Soporte prioritario",
+          "Panel de análisis"
+        ],
+        "cta": "Prueba Gratuita",
+        "popular": true
+      },
+      "enterprise": {
+        "name": "Empresarial",
+        "description": "Para hospitales y redes sanitarias",
+        "price": "Custom",
+        "period": "",
+        "features": [
+          "Todo en Profesional",
+          "Usuarios ilimitados",
+          "Integraciones personalizadas",
+          "Gerente de cuenta dedicado",
+          "Garantía SLA",
+          "Cumplimiento HIPAA"
+        ],
+        "cta": "Contactar Ventas"
+      }
+    }
+  },
+  "cta": {
+    "title": "¿Listo para modernizar tu arquitectura clínica?",
+    "subtitle": "Únete a más de 400 instituciones médicas líderes usando OmniDoc para potenciar el viaje de sus pacientes.",
+    "buttons": {
+      "primary": "Reservar Demo",
+      "secondary": "Contactar Ventas"
+    }
+  },
+  "footer": {
+    "tagline": "Proporcionando la infraestructura para la próxima generación de excelencia médica.",
+    "product": "Producto",
+    "company": "Empresa",
+    "network": "Red",
+    "links": {
+      "documentation": "Documentación",
+      "security": "Cumplimiento de Seguridad",
+      "support": "Soporte",
+      "privacy": "Política de Privacidad",
+      "terms": "Términos de Servicio",
+      "about": "Sobre Nosotros"
+    },
+    "copyright": "© 2024 OmniDoc Clinical Systems. Todos los derechos reservados.",
+    "status": "Todos los Sistemas Operativos"
+  }
+}
