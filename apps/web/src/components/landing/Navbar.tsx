@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Globe, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useLanguage } from '@/lib/context/LanguageContext';
-import { useMounted } from '@/hooks/useMounted';
 
 const translations = {
   en: {
@@ -22,10 +21,14 @@ const translations = {
   },
 };
 
+const emptySubscribe = () => () => {};
+const getSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const mounted = useMounted();
+  const mounted = useSyncExternalStore(emptySubscribe, getSnapshot, getServerSnapshot);
   const { lang, toggleLang } = useLanguage();
   const { setTheme, resolvedTheme } = useTheme();
 
@@ -34,11 +37,10 @@ export function Navbar() {
       setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener('scroll', handleScroll);
-    handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const t = translations[mounted ? lang : 'en'];
+  const t = translations[lang];
 
   return (
     <motion.header
