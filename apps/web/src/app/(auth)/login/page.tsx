@@ -8,6 +8,7 @@ import { Mail, Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:9999'
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const IS_HTTPS = typeof window !== 'undefined' && window.location.protocol === 'https:'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -24,7 +25,7 @@ export default function LoginPage() {
     setPassword('dev-superadmin-123')
   }
 
-  // Sign In: solo hace login cuando el usuario lo pide
+  // Sign In: hace login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -54,13 +55,21 @@ export default function LoginPage() {
         return
       }
 
-      // Set cookies
-      document.cookie = `sb-access-token=${data.access_token}; path=/; SameSite=Lax; max-age=3600`
-      document.cookie = `sb-refresh-token=${data.refresh_token}; path=/; SameSite=Lax; max-age=604800`
-      document.cookie = `sb-user-metadata=${encodeURIComponent(JSON.stringify(data.user?.user_metadata || {}))}; path=/; SameSite=Lax; max-age=3600`
+      // Set cookies SIN Secure flag en desarrollo (localhost usa HTTP)
+      const cookieOptions = IS_HTTPS ? '; Secure' : ''
+      
+      document.cookie = `sb-access-token=${data.access_token}; path=/; SameSite=Lax; max-age=3600${cookieOptions}`
+      document.cookie = `sb-refresh-token=${data.refresh_token}; path=/; SameSite=Lax; max-age=604800${cookieOptions}`
+      document.cookie = `sb-user-metadata=${encodeURIComponent(JSON.stringify(data.user?.user_metadata || {}))}; path=/; SameSite=Lax; max-age=3600${cookieOptions}`
+
+      // Guardar role en localStorage también (backup)
+      localStorage.setItem('sb-role', data.user?.user_metadata?.role || '')
+      localStorage.setItem('sb-email', data.user?.email || '')
+      localStorage.setItem('sb-user-id', data.user?.id || '')
 
       const role = data.user?.user_metadata?.role
 
+      // Redirect basado en role
       if (role === 'SUPERADMIN' || role === 'OPERATOR') {
         router.push('/saas')
       } else {
