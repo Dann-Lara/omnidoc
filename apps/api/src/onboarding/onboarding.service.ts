@@ -1,7 +1,7 @@
 import { Injectable, Logger, ConflictException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
-import { ClerkService } from '../auth/clerk.service';
+import { AuthService } from '../auth/auth.service';
 import type { CreateOnboardingDto } from './onboarding.dto';
 
 @Injectable()
@@ -10,7 +10,7 @@ export class OnboardingService {
 
   constructor(
     private prisma: PrismaService,
-    private clerkService: ClerkService,
+    private authService: AuthService,
   ) {}
 
   async createOnboarding(data: CreateOnboardingDto) {
@@ -67,21 +67,21 @@ export class OnboardingService {
         ],
         isDefault: true,
       },
-    });
-
-    let clerkUser;
+});
+    
+    let supabaseUser;
     try {
-      clerkUser = await this.clerkService.createUser({
-        emailAddress: data.email,
-        password: data.password,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        publicMetadata: {
+      supabaseUser = await this.authService.createUserInSupabase(
+        data.email,
+        data.password,
+        {
           role: 'CLIENT',
-          tenantType: data.type,
+          tenant_type: data.type,
           specialty: data.specialty,
-        },
-      });
+          organization_id: organization.id,
+          role_id: ownerRole.id,
+        }
+      );
     } catch (error) {
       await this.prisma.organization.delete({ where: { id: organization.id } });
       await this.prisma.role.delete({ where: { id: ownerRole.id } });
@@ -90,7 +90,7 @@ export class OnboardingService {
 
     await this.prisma.user.create({
       data: {
-        clerkId: clerkUser.id,
+        supabaseId: supabaseUser!.id,
         organizationId: organization.id,
         roleId: ownerRole.id,
         email: data.email,
@@ -101,21 +101,10 @@ export class OnboardingService {
       },
     });
 
-    await this.clerkService.updateUser(clerkUser.id, {
-      publicMetadata: {
-        role: 'CLIENT',
-        tenantType: data.type,
-        specialty: data.specialty,
-        organizationId: organization.id,
-        roleId: ownerRole.id,
-        isTenantAdmin: true,
-      },
-    });
-
     this.logger.log(`Onboarding complete for: ${data.email}`);
 
     return {
-      userId: clerkUser.id,
+      userId: supabaseUser!.id,
       organizationId: organization.id,
       slug: organization.slug,
     };

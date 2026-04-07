@@ -55,7 +55,7 @@ model Organization {
 
 model User {
   id             String    @id @default(uuid())
-  clerkId        String    @unique
+  supabaseId     String    @unique
   organizationId String
   roleId         String
   email          String
@@ -73,7 +73,7 @@ model User {
   doctorAppointments Appointment[] @relation("DoctorAppointments")
 
   @@index([organizationId])
-  @@index([clerkId])
+  @@index([supabaseId])
   @@index([email])
 }
 

@@ -1,12 +1,11 @@
-'use client';
+'use client'
 
-import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Mail, Lock, User, Building2, ArrowRight, AlertCircle } from 'lucide-react';
-
-const hasValidClerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && 
-  !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes('placeholder');
+import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { motion } from 'framer-motion'
+import { Mail, Lock, User, Building2, ArrowRight, AlertCircle } from 'lucide-react'
 
 const SPECIALTIES = [
   'General Medicine',
@@ -19,10 +18,13 @@ const SPECIALTIES = [
   'Gynecology',
   'Ophthalmology',
   'Other',
-];
+]
 
 export default function SignupPage() {
-  const [step, setStep] = useState(1);
+  const router = useRouter()
+  const supabase = createClient()
+
+  const [step, setStep] = useState(1)
   const [formData, setFormData] = useState({
     orgName: '',
     specialty: '',
@@ -30,57 +32,44 @@ export default function SignupPage() {
     lastName: '',
     email: '',
     password: '',
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const [ShowClerkSignUp, setShowClerkSignUp] = useState<React.ComponentType<Record<string, unknown>> | null>(null);
-
-  useEffect(() => {
-    if (hasValidClerkKey) {
-      import('@clerk/nextjs').then((mod) => {
-        setShowClerkSignUp(() => mod.SignUp);
-      });
-    }
-  }, []);
-
-  if (ShowClerkSignUp) {
-    const SignUpComponent = ShowClerkSignUp;
-    return (
-      <div className="space-y-8">
-        <div className="text-center lg:text-left">
-          <motion.h2
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-bold text-on-surface mb-2"
-          >
-            Start your journey
-          </motion.h2>
-          <p className="text-on-surface-variant">
-            Create your account and set up your practice in minutes
-          </p>
-        </div>
-
-        <SignUpComponent />
-
-        <div className="text-center">
-          <p className="text-sm text-on-surface-variant">
-            Already have an account?{' '}
-            <Link href="/login" className="text-primary font-semibold hover:underline">
-              Sign in
-            </Link>
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-  };
+  })
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setIsLoading(true)
+
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
+      options: {
+        data: {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          specialty: formData.specialty,
+          org_name: formData.orgName,
+        },
+      },
+    })
+
+    if (signUpError) {
+      setError(signUpError.message)
+      setIsLoading(false)
+      return
+    }
+
+    if (data.user) {
+      router.push('/dashboard')
+    }
+
+    setIsLoading(false)
+  }
 
   return (
     <div className="space-y-8">
@@ -97,31 +86,32 @@ export default function SignupPage() {
         </p>
       </div>
 
-      <div className="bg-warning-container/20 border border-warning/20 rounded-lg p-4 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
-        <div className="text-sm">
-          <p className="font-medium text-on-surface">Development Mode</p>
-          <p className="text-on-surface-variant">
-            Clerk keys not configured. Set <code className="text-xs bg-surface-container px-1 rounded">NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code> in <code className="text-xs bg-surface-container px-1 rounded">.env.local</code> to enable authentication.
-          </p>
+      {error && (
+        <div className="bg-error-container/20 border border-error/20 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-error mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-error">{error}</p>
         </div>
-      </div>
+      )}
 
       <div className="flex items-center justify-center gap-2 mb-4">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-          step >= 1 ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant'
-        }`}>
+        <div
+          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+            step >= 1 ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant'
+          }`}
+        >
           1
         </div>
         <div className={`w-12 h-0.5 ${step >= 2 ? 'bg-primary' : 'bg-surface-container'}`} />
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-          step >= 2 ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant'
-        }`}>
+        <div
+          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+            step >= 2 ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant'
+          }`}
+        >
           2
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSignup} className="space-y-6">
         {step === 1 && (
           <>
             <div>
@@ -152,8 +142,10 @@ export default function SignupPage() {
                 className="w-full px-4 py-3 bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
               >
                 <option value="">Select your specialty</option>
-                {SPECIALTIES.map(s => (
-                  <option key={s} value={s}>{s}</option>
+                {SPECIALTIES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
                 ))}
               </select>
             </div>
@@ -233,7 +225,7 @@ export default function SignupPage() {
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
                   className="w-full pl-12 pr-4 py-3 bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                  placeholder="Create a strong password"
+                  placeholder="Create a strong password (min 8 characters)"
                 />
               </div>
             </div>
@@ -248,7 +240,13 @@ export default function SignupPage() {
               </button>
               <button
                 type="submit"
-                disabled={isLoading || !formData.firstName || !formData.lastName || !formData.email || !formData.password}
+                disabled={
+                  isLoading ||
+                  !formData.firstName ||
+                  !formData.lastName ||
+                  !formData.email ||
+                  formData.password.length < 8
+                }
                 className="flex-1 clinical-gradient text-on-primary py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isLoading ? (
@@ -274,5 +272,5 @@ export default function SignupPage() {
         </p>
       </div>
     </div>
-  );
+  )
 }

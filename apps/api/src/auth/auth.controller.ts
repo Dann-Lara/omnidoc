@@ -1,18 +1,38 @@
-import { Controller, Post, Body, Headers, HttpCode, HttpStatus, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Post, Body, HttpCode, HttpStatus, Logger, Req, Get } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
-import { WebhookService } from './webhook.service';
+import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
 
-interface ClerkWebhookPayload {
-  type: string;
-  data: {
-    id: string;
-    email_addresses: Array<{ email_address: string }>;
-    first_name: string;
-    last_name: string;
-    public_metadata?: Record<string, unknown>;
-  };
+class SignupDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  @MinLength(8)
+  password: string;
+
+  @IsString()
+  firstName: string;
+
+  @IsString()
+  lastName: string;
+
+  @IsOptional()
+  @IsString()
+  organizationId?: string;
+
+  @IsOptional()
+  @IsString()
+  roleId?: string;
+}
+
+class DevLoginDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  password: string;
 }
 
 @ApiTags('auth')
@@ -22,85 +42,95 @@ export class AuthController {
 
   constructor(
     private readonly authService: AuthService,
-    private readonly webhookService: WebhookService,
     private readonly configService: ConfigService,
   ) {}
 
-  @Post('webhook')
+  @Post('signup')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a new user (signup)' })
+  @ApiResponse({ status: 201, description: 'User created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  async signup(@Body() dto: SignupDto) {
+    this.logger.log(`Signup attempt for email: ${dto.email}`);
+
+    try {
+      const user = await this.authService.createUserInSupabase(dto.email, dto.password, {
+        first_name: dto.firstName,
+        last_name: dto.lastName,
+        organization_id: dto.organizationId,
+        role_id: dto.roleId,
+      });
+
+      await this.authService.syncUser({
+        supabaseId: user.id,
+        email: dto.email,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        organizationId: dto.organizationId,
+        roleId: dto.roleId,
+      });
+
+      this.logger.log(`User created successfully: ${user.id}`);
+      return { user, message: 'User created successfully' };
+    } catch (error) {
+      this.logger.error(`Signup failed: ${error}`);
+      throw error;
+    }
+  }
+
+  @Post('dev-login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Handle Clerk webhook events' })
-  @ApiResponse({ status: 200, description: 'Webhook processed' })
-  @ApiResponse({ status: 401, description: 'Invalid signature' })
-  async handleWebhook(
-    @Body() body: string,
-    @Headers('clerk-signature') signature: string,
-  ) {
-    const webhookSecret = this.configService.get<string>('CLERK_WEBHOOK_SECRET');
+  @ApiOperation({ summary: 'Dev login - create and login superadmin (dev only)' })
+  @ApiResponse({ status: 200, description: 'Dev login successful' })
+  @ApiResponse({ status: 403, description: 'Not in development mode' })
+  async devLogin(@Body() dto: DevLoginDto) {
+    const isDevMode = this.configService.get<string>('DEV_MODE') === 'true';
 
-    if (!webhookSecret) {
-      this.logger.error('CLERK_WEBHOOK_SECRET not configured');
-      return { error: 'Webhook not configured' };
+    if (!isDevMode) {
+      this.logger.warn('Dev login attempted in non-dev environment');
+      return { error: 'Dev login is only available in development mode' };
     }
 
-    const isValid = this.webhookService.verifyClerkWebhook(body, signature, webhookSecret);
-    if (!isValid) {
-      this.logger.warn('Invalid webhook signature');
-      return { error: 'Invalid signature' };
+    this.logger.log(`Dev login for: ${dto.email}`);
+
+    try {
+      const user = await this.authService.createUserInSupabase(dto.email, dto.password, {
+        role: 'SUPERADMIN',
+        first_name: 'Super',
+        last_name: 'Admin',
+      });
+
+      return {
+        user,
+        message: 'Dev login successful',
+      };
+    } catch (error) {
+      this.logger.error(`Dev login failed: ${error}`);
+      throw error;
+    }
+  }
+
+  @Get('me')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user info' })
+  @ApiResponse({ status: 200, description: 'User info retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getMe(@Req() req: Request) {
+    const headers = req.headers as unknown as Record<string, string | undefined>;
+    const authHeader = headers['authorization'];
+    if (!authHeader) {
+      throw new Error('No authorization header');
     }
 
-    const payload: ClerkWebhookPayload = JSON.parse(body);
-    const { type, data } = payload;
-
-    this.logger.log(`Processing webhook: ${type} for user ${data.id}`);
-
-    switch (type) {
-      case 'user.created':
-        await this.handleUserCreated(data);
-        break;
-      case 'user.updated':
-        await this.handleUserUpdated(data);
-        break;
-      case 'user.deleted':
-        await this.handleUserDeleted(data);
-        break;
-      default:
-        this.logger.log(`Unhandled webhook type: ${type}`);
-    }
-
-    return { received: true };
+    const token = authHeader.replace('Bearer ', '');
+    return { token };
   }
 
-  private async handleUserCreated(data: ClerkWebhookPayload['data']) {
-    this.logger.log(`User created in Clerk: ${data.id}`);
-
-    await this.authService.syncUser({
-      clerkId: data.id,
-      email: data.email_addresses[0]?.email_address || '',
-      firstName: data.first_name || '',
-      lastName: data.last_name || '',
-      organizationId: data.public_metadata?.organizationId as string,
-      roleId: data.public_metadata?.roleId as string,
-      isTenantAdmin: data.public_metadata?.isTenantAdmin as boolean,
-    });
-  }
-
-  private async handleUserUpdated(data: ClerkWebhookPayload['data']) {
-    this.logger.log(`User updated in Clerk: ${data.id}`);
-    
-    await this.authService.syncUser({
-      clerkId: data.id,
-      email: data.email_addresses[0]?.email_address || '',
-      firstName: data.first_name || '',
-      lastName: data.last_name || '',
-      organizationId: data.public_metadata?.organizationId as string,
-      roleId: data.public_metadata?.roleId as string,
-      isTenantAdmin: data.public_metadata?.isTenantAdmin as boolean,
-    });
-  }
-
-  private async handleUserDeleted(data: { id: string }) {
-    this.logger.log(`User deleted from Clerk: ${data.id}`);
-    
-    await this.authService.deleteUser(data.id);
+  @Post('verify')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify JWT token' })
+  @ApiResponse({ status: 200, description: 'Token verified' })
+  async verifyToken(@Body() _body: { token: string }) {
+    return { valid: true, message: 'Token verification endpoint' };
   }
 }

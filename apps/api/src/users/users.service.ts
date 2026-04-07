@@ -5,9 +5,9 @@ import { PrismaService } from '../database/prisma.service';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async getUserByClerkId(clerkId: string) {
+  async getUserBySupabaseId(supabaseId: string) {
     const user = await this.prisma.user.findUnique({
-      where: { clerkId },
+      where: { supabaseId },
       include: {
         organization: true,
         role: true,
@@ -31,9 +31,9 @@ export class UsersService {
     });
   }
 
-  async getUserPermissions(clerkId: string) {
+  async getUserPermissions(supabaseId: string) {
     const user = await this.prisma.user.findUnique({
-      where: { clerkId },
+      where: { supabaseId },
       include: {
         role: true,
         organization: true,

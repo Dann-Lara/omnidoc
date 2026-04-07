@@ -2,27 +2,57 @@ version: '3.9'
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: supabase/postgres:15.6.1.117
     container_name: omnidoc-postgres
     environment:
-      POSTGRES_USER: omnidoc
-      POSTGRES_PASSWORD: omnidoc_dev
-      POSTGRES_DB: omnidoc
+      POSTGRES_USER: ${POSTGRES_USER:-omnidoc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-omnidoc_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-omnidoc}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U omnidoc"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-omnidoc}"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  auth:
+    image: supabase/gotrue:v2.158.1
+    container_name: omnidoc-auth
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${API_EXTERNAL_URL:-http://localhost:9999}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://${POSTGRES_USER:-omnidoc}:${POSTGRES_PASSWORD:-omnidoc_dev}@postgres:5432/${POSTGRES_DB:-omnidoc}
+      GOTRUE_SITE_URL: ${APP_URL:-http://localhost:3000}
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production-min-32-chars}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_URI_ALLOW_LIST: "*"
+      GOTRUE_LOG_FORMAT: "json"
+      GOTRUE_LOG_LEVEL: "info"
+    ports:
+      - "9999:9999"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
 
   redis:
     image: redis:7-alpine
     container_name: omnidoc-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:

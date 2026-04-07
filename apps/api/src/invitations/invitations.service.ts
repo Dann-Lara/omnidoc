@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
-import { ClerkService } from '../auth/clerk.service';
+import { AuthService } from '../auth/auth.service';
 import type { CreateInvitationDto } from './invitations.dto';
 
 @Injectable()
@@ -10,7 +10,7 @@ export class InvitationsService {
 
   constructor(
     private prisma: PrismaService,
-    private clerkService: ClerkService,
+    private authService: AuthService,
   ) {}
 
   async createInvitation(data: CreateInvitationDto & { createdBy: string }) {
@@ -130,28 +130,28 @@ export class InvitationsService {
       roleId = defaultRole?.id;
     }
 
-    let clerkUser;
+    let supabaseUser;
     try {
-      clerkUser = await this.clerkService.createUser({
-        emailAddress: invitation.email,
-        password: data.password,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        publicMetadata: {
+      supabaseUser = await this.authService.createUserInSupabase(
+        invitation.email,
+        data.password,
+        {
           role: invitation.role,
-          organizationId,
-          roleId,
-        },
-      });
+          organization_id: organizationId,
+          role_id: roleId,
+          first_name: data.firstName,
+          last_name: data.lastName,
+        }
+      );
     } catch (error) {
-      this.logger.error('Failed to create Clerk user', error);
+      this.logger.error('Failed to create Supabase user', error);
       throw error;
     }
 
     if (organizationId && roleId) {
       await this.prisma.user.create({
         data: {
-          clerkId: clerkUser.id,
+          supabaseId: supabaseUser!.id,
           organizationId,
           roleId,
           email: invitation.email,
@@ -172,7 +172,7 @@ export class InvitationsService {
     this.logger.log(`Invitation completed for: ${invitation.email}`);
 
     return {
-      userId: clerkUser.id,
+      userId: supabaseUser!.id,
       organizationId,
       redirectUrl,
     };

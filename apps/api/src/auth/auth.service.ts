@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { ClerkService } from './clerk.service';
+import { supabaseAdmin } from '../lib/supabase';
 
 export interface SyncUserData {
-  clerkId: string;
+  supabaseId: string;
   email: string;
   firstName: string;
   lastName: string;
@@ -16,20 +16,17 @@ export interface SyncUserData {
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
-  constructor(
-    private prisma: PrismaService,
-    private clerkService: ClerkService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   async syncUser(data: SyncUserData) {
     const existingUser = await this.prisma.user.findUnique({
-      where: { clerkId: data.clerkId },
+      where: { supabaseId: data.supabaseId },
     });
 
     if (existingUser) {
-      this.logger.log(`User ${data.clerkId} already exists, updating...`);
+      this.logger.log(`User ${data.supabaseId} already exists, updating...`);
       return this.prisma.user.update({
-        where: { clerkId: data.clerkId },
+        where: { supabaseId: data.supabaseId },
         data: {
           email: data.email,
           firstName: data.firstName,
@@ -38,10 +35,10 @@ export class AuthService {
       });
     }
 
-    this.logger.log(`Creating new user for clerkId: ${data.clerkId}`);
+    this.logger.log(`Creating new user for supabaseId: ${data.supabaseId}`);
     return this.prisma.user.create({
       data: {
-        clerkId: data.clerkId,
+        supabaseId: data.supabaseId,
         email: data.email,
         firstName: data.firstName,
         lastName: data.lastName,
@@ -52,9 +49,9 @@ export class AuthService {
     });
   }
 
-  async getUserByClerkId(clerkId: string) {
+  async getUserBySupabaseId(supabaseId: string) {
     return this.prisma.user.findUnique({
-      where: { clerkId },
+      where: { supabaseId },
       include: {
         organization: true,
         role: true,
@@ -62,9 +59,9 @@ export class AuthService {
     });
   }
 
-  async getUserRole(clerkId: string) {
+  async getUserRole(supabaseId: string) {
     const user = await this.prisma.user.findUnique({
-      where: { clerkId },
+      where: { supabaseId },
       include: {
         role: true,
         organization: true,
@@ -86,22 +83,55 @@ export class AuthService {
     };
   }
 
-  async deleteUser(clerkId: string) {
-    this.logger.log(`Deleting user with clerkId: ${clerkId}`);
-    
+  async deleteUser(supabaseId: string) {
+    this.logger.log(`Deleting user with supabaseId: ${supabaseId}`);
+
     const user = await this.prisma.user.findUnique({
-      where: { clerkId },
+      where: { supabaseId },
     });
 
     if (!user) {
-      this.logger.warn(`User with clerkId ${clerkId} not found in database`);
+      this.logger.warn(`User with supabaseId ${supabaseId} not found in database`);
       return null;
     }
 
-    await this.clerkService.deleteUser(clerkId);
+    try {
+      const { error } = await supabaseAdmin.auth.admin.deleteUser(supabaseId);
+      if (error) {
+        this.logger.warn(`Failed to delete user from Supabase: ${error.message}`);
+      }
+    } catch (error) {
+      this.logger.warn(`Supabase user deletion skipped: ${error}`);
+    }
 
     return this.prisma.user.delete({
-      where: { clerkId },
+      where: { supabaseId },
+    });
+  }
+
+  async createUserInSupabase(email: string, password: string, metadata: Record<string, unknown>) {
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: metadata,
+    });
+
+    if (error) {
+      this.logger.error(`Failed to create user in Supabase: ${error.message}`);
+      throw new Error(error.message);
+    }
+
+    return data.user;
+  }
+
+  async getUserByEmail(email: string) {
+    return this.prisma.user.findFirst({
+      where: { email },
+      include: {
+        organization: true,
+        role: true,
+      },
     });
   }
 }

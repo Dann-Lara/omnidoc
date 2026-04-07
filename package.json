@@ -14,9 +14,10 @@
     "test:e2e": "turbo run test:e2e",
     "db:migrate": "turbo run db:migrate",
     "db:seed": "turbo run db:seed",
-    "setup": "pnpm install && pnpm run db:migrate && pnpm run db:seed",
+    "setup": "pnpm install && node scripts/setup-supabase.js && pnpm db:migrate && pnpm db:seed",
     "docker:up": "docker compose -f infra/docker/docker-compose.yml up -d",
-    "docker:down": "docker compose -f infra/docker/docker-compose.yml down"
+    "docker:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "docker:logs": "docker compose -f infra/docker/docker-compose.yml logs -f"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
