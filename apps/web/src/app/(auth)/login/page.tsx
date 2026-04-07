@@ -35,25 +35,31 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      const url = `${SUPABASE_URL}/auth/v1/token?grant_type=password`
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({ email, password }),
-        credentials: 'omit',
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
-        setError(data.msg || 'Login failed')
+        let errorMsg = `Login failed (${response.status})`
+        try {
+          const errorData = await response.json()
+          errorMsg = errorData.msg || errorMsg
+        } catch {}
+        setError(errorMsg)
         setIsLoading(false)
         return
       }
 
-      // Guardar SOLO en localStorage (las cookies Secure no funcionan en HTTP localhost)
+      const data = await response.json()
+
+      // Guardar en localStorage
       localStorage.setItem('sb-access-token', data.access_token || '')
       localStorage.setItem('sb-refresh-token', data.refresh_token || '')
       localStorage.setItem('sb-user', JSON.stringify(data.user || {}))
