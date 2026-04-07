@@ -2,21 +2,26 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { User, isAuthenticated, clearAuthSession, getStoredUser } from '@/lib/auth'
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function TenantLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [isAuthorized, setIsAuthorized] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const role = localStorage.getItem('sb-role')
-    const userId = localStorage.getItem('sb-user-id')
-    
-    if (userId) {
-      setIsAuthorized(true)
-    } else {
+    if (!isAuthenticated()) {
       router.push('/login')
+      return
     }
+
+    const storedUser = getStoredUser()
+    if (!storedUser) {
+      router.push('/login')
+      return
+    }
+
+    setIsAuthorized(true)
     setIsLoading(false)
   }, [router])
 
@@ -32,23 +37,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return null
   }
 
+  const storedUser = getStoredUser()
+  const user = storedUser ? new User(storedUser) : null
+
   return (
     <div className="min-h-screen bg-surface">
       <header className="bg-primary text-white p-4">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold">OmniDoc Dashboard</h1>
+          <h1 className="text-xl font-bold">OmniDoc Clinic</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm opacity-80">
-              {localStorage.getItem('sb-email') || ''}
+              {user?.getFullName() || ''}
+            </span>
+            <span className="text-xs bg-white/20 px-2 py-1 rounded">
+              {user?.getRole() || ''}
             </span>
             <button
               onClick={() => {
-                localStorage.removeItem('sb-access-token')
-                localStorage.removeItem('sb-refresh-token')
-                localStorage.removeItem('sb-user')
-                localStorage.removeItem('sb-role')
-                localStorage.removeItem('sb-email')
-                localStorage.removeItem('sb-user-id')
+                clearAuthSession()
                 router.push('/login')
               }}
               className="text-sm hover:underline"

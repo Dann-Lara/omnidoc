@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Mail, Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react'
+import { User, LoginResponse, saveAuthSession } from '@/lib/auth'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -42,7 +43,7 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       })
 
-      const data = await response.json()
+      const data: LoginResponse = await response.json()
 
       if (!response.ok || data.error) {
         setError(data.error || `Login failed (${response.status})`)
@@ -50,21 +51,10 @@ export default function LoginPage() {
         return
       }
 
-      // Guardar en localStorage
-      localStorage.setItem('sb-access-token', data.access_token || '')
-      localStorage.setItem('sb-refresh-token', data.refresh_token || '')
-      localStorage.setItem('sb-user', JSON.stringify(data.user || {}))
-      localStorage.setItem('sb-role', data.user?.user_metadata?.role || '')
-      localStorage.setItem('sb-email', data.user?.email || '')
-      localStorage.setItem('sb-user-id', data.user?.id || '')
+      const user = new User(data.user)
+      saveAuthSession(data)
 
-      const role = data.user?.user_metadata?.role
-
-      if (role === 'SUPERADMIN' || role === 'OPERATOR') {
-        router.push('/saas')
-      } else {
-        router.push('/dashboard')
-      }
+      router.push(user.getDashboardRoute())
     } catch (err) {
       console.error('Login error:', err)
       setError('Unable to connect to authentication service')
