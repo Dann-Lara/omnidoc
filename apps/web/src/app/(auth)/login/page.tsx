@@ -18,9 +18,22 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
+  // Dev button: solo pre-llena los campos
+  const handleDevPrefill = () => {
+    setEmail('superadmin@omnidoc.dev')
+    setPassword('dev-superadmin-123')
+  }
+
+  // Sign In: solo hace login cuando el usuario lo pide
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    if (!email || !password) {
+      setError('Please enter email and password')
+      return
+    }
+
     setIsLoading(true)
 
     try {
@@ -53,45 +66,6 @@ export default function LoginPage() {
       } else {
         router.push('/dashboard')
       }
-    } catch (err) {
-      console.error('Login error:', err)
-      setError('Unable to connect to authentication service. Please try again.')
-      setIsLoading(false)
-    }
-  }
-
-  const handleDevLogin = async () => {
-    await handleLoginInternal('superadmin@omnidoc.dev', 'dev-superadmin-123')
-  }
-
-  const handleLoginInternal = async (loginEmail: string, loginPassword: string) => {
-    setIsLoading(true)
-    setError('')
-
-    try {
-      const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.msg || 'Login failed')
-        setIsLoading(false)
-        return
-      }
-
-      // Set cookies
-      document.cookie = `sb-access-token=${data.access_token}; path=/; SameSite=Lax; max-age=3600`
-      document.cookie = `sb-refresh-token=${data.refresh_token}; path=/; SameSite=Lax; max-age=604800`
-      document.cookie = `sb-user-metadata=${encodeURIComponent(JSON.stringify(data.user?.user_metadata || {}))}; path=/; SameSite=Lax; max-age=3600`
-
-      router.push('/saas')
     } catch (err) {
       console.error('Login error:', err)
       setError('Unable to connect to authentication service. Please try again.')
@@ -180,19 +154,15 @@ export default function LoginPage() {
       {isDev && (
         <div className="border-t border-outline-variant pt-6">
           <button
-            onClick={handleDevLogin}
-            disabled={isLoading}
-            className="w-full py-3 px-6 rounded-lg font-semibold border-2 border-dashed border-primary text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            type="button"
+            onClick={handleDevPrefill}
+            className="w-full py-3 px-6 rounded-lg font-semibold border-2 border-dashed border-primary text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-2"
           >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Loading...
-              </>
-            ) : (
-              'Dev: Login as Superadmin'
-            )}
+            Dev: Pre-fill Superadmin Credentials
           </button>
+          <p className="text-xs text-on-surface-variant mt-2 text-center">
+            Click to fill credentials, then click Sign In
+          </p>
         </div>
       )}
 
