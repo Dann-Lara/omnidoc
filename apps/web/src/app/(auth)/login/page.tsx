@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { motion } from 'framer-motion'
-import { Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react'
+import { Mail, Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -22,23 +22,29 @@ export default function LoginPage() {
     setError('')
     setIsLoading(true)
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (authError) {
-      setError(authError.message)
+      if (authError) {
+        setError(authError.message)
+        setIsLoading(false)
+        return
+      }
+
+      const role = data.user?.user_metadata?.role as string | undefined
+
+      if (role === 'SUPERADMIN' || role === 'OPERATOR') {
+        router.push('/saas')
+      } else {
+        router.push('/dashboard')
+      }
+    } catch (err) {
+      console.error('Login error:', err)
+      setError('Unable to connect to authentication service. Please try again.')
       setIsLoading(false)
-      return
-    }
-
-    const role = data.user?.user_metadata?.role as string | undefined
-
-    if (role === 'SUPERADMIN' || role === 'OPERATOR') {
-      router.push('/saas')
-    } else {
-      router.push('/dashboard')
     }
   }
 
@@ -46,15 +52,20 @@ export default function LoginPage() {
     setIsLoading(true)
     setError('')
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: 'superadmin@omnidoc.dev',
-      password: 'dev-superadmin-123',
-    })
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: 'superadmin@omnidoc.dev',
+        password: 'dev-superadmin-123',
+      })
 
-    if (authError) {
-      setError(authError.message)
-    } else {
-      router.push('/saas')
+      if (authError) {
+        setError(authError.message)
+      } else {
+        router.push('/saas')
+      }
+    } catch (err) {
+      console.error('Dev login error:', err)
+      setError('Unable to connect to authentication service. Please try again.')
     }
 
     setIsLoading(false)
@@ -125,7 +136,10 @@ export default function LoginPage() {
           className="w-full clinical-gradient text-on-primary py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {isLoading ? (
-            <span className="animate-pulse">Signing in...</span>
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Signing in...
+            </>
           ) : (
             <>
               Sign In
@@ -142,7 +156,14 @@ export default function LoginPage() {
             disabled={isLoading}
             className="w-full py-3 px-6 rounded-lg font-semibold border-2 border-dashed border-primary text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            Dev: Login as Superadmin
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              'Dev: Login as Superadmin'
+            )}
           </button>
         </div>
       )}

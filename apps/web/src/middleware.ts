@@ -2,42 +2,50 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
-        },
-      },
-    }
-  )
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  const { data: { user } } = await supabase.auth.getUser()
-  const pathname = request.nextUrl.pathname
-
-  const protectedPaths = ['/dashboard', '/saas', '/tenant', '/settings']
-  const isProtected = protectedPaths.some(p => pathname.startsWith(p))
-
-  if (isProtected && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Missing Supabase environment variables')
+    return NextResponse.next()
   }
 
-  if (user) {
-    const role = user.user_metadata?.role as string | undefined
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) =>
+          request.cookies.set(name, value)
+        )
+      },
+    },
+  })
 
-    if (['/', '/login', '/signup'].includes(pathname)) {
-      if (role === 'SUPERADMIN') {
-        return NextResponse.redirect(new URL('/saas', request.url))
-      }
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    const pathname = request.nextUrl.pathname
+
+    const protectedPaths = ['/dashboard', '/saas', '/tenant', '/settings']
+    const isProtected = protectedPaths.some(p => pathname.startsWith(p))
+
+    if (isProtected && !user) {
+      return NextResponse.redirect(new URL('/login', request.url))
     }
+
+    if (user) {
+      const role = user.user_metadata?.role as string | undefined
+
+      if (['/', '/login', '/signup'].includes(pathname)) {
+        if (role === 'SUPERADMIN') {
+          return NextResponse.redirect(new URL('/saas', request.url))
+        }
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+    }
+  } catch (error) {
+    console.error('Middleware auth error:', error)
   }
 
   return NextResponse.next()
