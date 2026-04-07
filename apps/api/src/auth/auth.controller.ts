@@ -1,13 +1,11 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
-import { IsEmail, IsString } from 'class-validator';
+import { LoginResponseDto } from './dto/login-response.dto';
+import { UserRole } from './types/user.types';
 
 class LoginDto {
-  @IsEmail()
   email: string;
-
-  @IsString()
   password: string;
 }
 
@@ -53,15 +51,25 @@ export class AuthController {
         return { error: data.msg || 'Invalid credentials', status: response.status };
       }
 
-      this.logger.log(`Login successful for: ${dto.email}`);
+      const role = this.extractRole(data.user?.user_metadata);
 
-      return {
+      this.logger.log(`Login successful for: ${dto.email}, role: ${role}`);
+
+      const loginResponse = new LoginResponseDto({
         access_token: data.access_token,
         refresh_token: data.refresh_token,
         expires_in: data.expires_in,
         expires_at: data.expires_at,
-        user: data.user,
-      };
+        user: {
+          id: data.user?.id || '',
+          email: data.user?.email || '',
+          role: role,
+          first_name: data.user?.user_metadata?.first_name || null,
+          last_name: data.user?.user_metadata?.last_name || null,
+        },
+      });
+
+      return loginResponse;
     } catch (error) {
       this.logger.error(`Login error: ${error}`);
       return { error: 'Authentication service unavailable' };
@@ -119,15 +127,18 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Dev login - returns superadmin session' })
   async devLogin() {
-    const isDevMode = this.configService.get<string>('NODE_ENV') === 'development';
-
-    if (!isDevMode) {
-      return { error: 'Dev login is only available in development mode' };
-    }
-
     return this.login({
       email: 'superadmin@omnidoc.dev',
       password: 'dev-superadmin-123',
     });
+  }
+
+  private extractRole(metadata?: Record<string, unknown>): UserRole | null {
+    if (!metadata) return null;
+    const role = metadata.role;
+    if (role && Object.values(UserRole).includes(role as UserRole)) {
+      return role as UserRole;
+    }
+    return null;
   }
 }

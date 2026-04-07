@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 
-export default function SaaSDashboard() {
+export default function AdminDashboard() {
   return (
     <div className="space-y-8">
       <motion.div
@@ -10,7 +10,7 @@ export default function SaaSDashboard() {
         animate={{ opacity: 1, y: 0 }}
       >
         <h2 className="text-3xl font-bold text-on-surface mb-2">
-          Superadmin Dashboard
+          Admin Dashboard
         </h2>
         <p className="text-on-surface-variant">
           Manage all organizations and system settings
