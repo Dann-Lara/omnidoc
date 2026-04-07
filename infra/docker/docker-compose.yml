@@ -5,22 +5,21 @@ services:
     image: supabase/postgres:15.6.1.117
     container_name: omnidoc-postgres
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-omnidoc}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-omnidoc_dev}
-      POSTGRES_DB: ${POSTGRES_DB:-omnidoc}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-omnidoc}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   auth:
-    image: supabase/gotrue:v2.158.1
+    image: supabase/gotrue:v2.155.0
     container_name: omnidoc-auth
     depends_on:
       postgres:
@@ -30,7 +29,7 @@ services:
       GOTRUE_API_PORT: 9999
       API_EXTERNAL_URL: ${API_EXTERNAL_URL:-http://localhost:9999}
       GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: postgres://${POSTGRES_USER:-omnidoc}:${POSTGRES_PASSWORD:-omnidoc_dev}@postgres:5432/${POSTGRES_DB:-omnidoc}
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
       GOTRUE_SITE_URL: ${APP_URL:-http://localhost:3000}
       GOTRUE_JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production-min-32-chars}
       GOTRUE_JWT_EXP: 3600
@@ -60,16 +59,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: omnidoc-mailhog
-    ports:
-      - "1025:1025"
-      - "8025:8025"
-    environment:
-      MH_STORAGE: maildir
-      MH_MAILDIR_PATH: /maildir
 
 volumes:
   postgres_data:
