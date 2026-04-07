@@ -6,8 +6,7 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Mail, Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react'
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:9999'
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -35,29 +34,21 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const url = `${SUPABASE_URL}/auth/v1/token?grant_type=password`
-      
-      const response = await fetch(url, {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({ email, password }),
       })
 
-      if (!response.ok) {
-        let errorMsg = `Login failed (${response.status})`
-        try {
-          const errorData = await response.json()
-          errorMsg = errorData.msg || errorMsg
-        } catch {}
-        setError(errorMsg)
+      const data = await response.json()
+
+      if (!response.ok || data.error) {
+        setError(data.error || `Login failed (${response.status})`)
         setIsLoading(false)
         return
       }
-
-      const data = await response.json()
 
       // Guardar en localStorage
       localStorage.setItem('sb-access-token', data.access_token || '')

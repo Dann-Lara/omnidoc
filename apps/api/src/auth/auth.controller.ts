@@ -1,33 +1,9 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Logger, Req, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Post, Body, HttpCode, HttpStatus, Logger } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
-import { AuthService } from './auth.service';
-import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
+import { IsEmail, IsString } from 'class-validator';
 
-class SignupDto {
-  @IsEmail()
-  email: string;
-
-  @IsString()
-  @MinLength(8)
-  password: string;
-
-  @IsString()
-  firstName: string;
-
-  @IsString()
-  lastName: string;
-
-  @IsOptional()
-  @IsString()
-  organizationId?: string;
-
-  @IsOptional()
-  @IsString()
-  roleId?: string;
-}
-
-class DevLoginDto {
+class LoginDto {
   @IsEmail()
   email: string;
 
@@ -39,98 +15,119 @@ class DevLoginDto {
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
+  private readonly supabaseUrl: string;
+  private readonly supabaseAdminKey: string;
 
   constructor(
-    private readonly authService: AuthService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    this.supabaseUrl = this.configService.get<string>('SUPABASE_URL') || 'http://localhost:9999';
+    this.supabaseAdminKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY') || '';
+  }
+
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login user' })
+  @ApiResponse({ status: 200, description: 'Login successful' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  async login(@Body() dto: LoginDto) {
+    this.logger.log(`Login attempt for email: ${dto.email}`);
+
+    try {
+      const response = await fetch(`${this.supabaseUrl}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': this.supabaseAdminKey,
+        },
+        body: JSON.stringify({
+          email: dto.email,
+          password: dto.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        this.logger.warn(`Login failed for ${dto.email}: ${data.msg}`);
+        return { error: data.msg || 'Invalid credentials', status: response.status };
+      }
+
+      this.logger.log(`Login successful for: ${dto.email}`);
+
+      return {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expires_in: data.expires_in,
+        expires_at: data.expires_at,
+        user: data.user,
+      };
+    } catch (error) {
+      this.logger.error(`Login error: ${error}`);
+      return { error: 'Authentication service unavailable' };
+    }
+  }
 
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new user (signup)' })
   @ApiResponse({ status: 201, description: 'User created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input' })
-  async signup(@Body() dto: SignupDto) {
+  async signup(@Body() dto: { email: string; password: string; firstName: string; lastName: string }) {
     this.logger.log(`Signup attempt for email: ${dto.email}`);
 
     try {
-      const user = await this.authService.createUserInSupabase(dto.email, dto.password, {
-        first_name: dto.firstName,
-        last_name: dto.lastName,
-        organization_id: dto.organizationId,
-        role_id: dto.roleId,
+      const response = await fetch(`${this.supabaseUrl}/auth/v1/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': this.supabaseAdminKey,
+        },
+        body: JSON.stringify({
+          email: dto.email,
+          password: dto.password,
+          options: {
+            data: {
+              first_name: dto.firstName,
+              last_name: dto.lastName,
+            },
+          },
+        }),
       });
 
-      await this.authService.syncUser({
-        supabaseId: user.id,
-        email: dto.email,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        organizationId: dto.organizationId,
-        roleId: dto.roleId,
-      });
+      const data = await response.json();
 
-      this.logger.log(`User created successfully: ${user.id}`);
-      return { user, message: 'User created successfully' };
+      if (!response.ok) {
+        this.logger.warn(`Signup failed for ${dto.email}: ${data.msg}`);
+        return { error: data.msg || 'Signup failed' };
+      }
+
+      this.logger.log(`Signup successful for: ${dto.email}`);
+
+      return {
+        user: data.user,
+        session: data.session,
+        message: 'User created successfully',
+      };
     } catch (error) {
-      this.logger.error(`Signup failed: ${error}`);
-      throw error;
+      this.logger.error(`Signup error: ${error}`);
+      return { error: 'Authentication service unavailable' };
     }
   }
 
   @Post('dev-login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Dev login - create and login superadmin (dev only)' })
-  @ApiResponse({ status: 200, description: 'Dev login successful' })
-  @ApiResponse({ status: 403, description: 'Not in development mode' })
-  async devLogin(@Body() dto: DevLoginDto) {
-    const isDevMode = this.configService.get<string>('DEV_MODE') === 'true';
+  @ApiOperation({ summary: 'Dev login - returns superadmin session' })
+  async devLogin() {
+    const isDevMode = this.configService.get<string>('NODE_ENV') === 'development';
 
     if (!isDevMode) {
-      this.logger.warn('Dev login attempted in non-dev environment');
       return { error: 'Dev login is only available in development mode' };
     }
 
-    this.logger.log(`Dev login for: ${dto.email}`);
-
-    try {
-      const user = await this.authService.createUserInSupabase(dto.email, dto.password, {
-        role: 'SUPERADMIN',
-        first_name: 'Super',
-        last_name: 'Admin',
-      });
-
-      return {
-        user,
-        message: 'Dev login successful',
-      };
-    } catch (error) {
-      this.logger.error(`Dev login failed: ${error}`);
-      throw error;
-    }
-  }
-
-  @Get('me')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current user info' })
-  @ApiResponse({ status: 200, description: 'User info retrieved' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getMe(@Req() req: Request) {
-    const headers = req.headers as unknown as Record<string, string | undefined>;
-    const authHeader = headers['authorization'];
-    if (!authHeader) {
-      throw new Error('No authorization header');
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    return { token };
-  }
-
-  @Post('verify')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Verify JWT token' })
-  @ApiResponse({ status: 200, description: 'Token verified' })
-  async verifyToken(@Body() _body: { token: string }) {
-    return { valid: true, message: 'Token verification endpoint' };
+    return this.login({
+      email: 'superadmin@omnidoc.dev',
+      password: 'dev-superadmin-123',
+    });
   }
 }
