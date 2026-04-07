@@ -1,51 +1,48 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Missing Supabase environment variables')
     return NextResponse.next()
   }
 
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll()
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value)
-        )
-      },
-    },
-  })
+  const protectedPaths = ['/dashboard', '/saas', '/tenant', '/settings']
+  const authPaths = ['/login', '/signup']
 
-  try {
-    const { data: { user } } = await supabase.auth.getUser()
-    const pathname = request.nextUrl.pathname
+  const isProtected = protectedPaths.some(p => pathname.startsWith(p))
+  const isAuthPage = authPaths.some(p => pathname === p)
 
-    const protectedPaths = ['/dashboard', '/saas', '/tenant', '/settings']
-    const isProtected = protectedPaths.some(p => pathname.startsWith(p))
+  // For protected routes, check for auth cookie
+  if (isProtected) {
+    const accessToken = request.cookies.get('sb-access-token')?.value
+    const refreshToken = request.cookies.get('sb-refresh-token')?.value
 
-    if (isProtected && !user) {
+    if (!accessToken && !refreshToken) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
+  }
 
-    if (user) {
-      const role = user.user_metadata?.role as string | undefined
+  // For auth pages, if user has tokens, redirect based on role
+  if (isAuthPage) {
+    const accessToken = request.cookies.get('sb-access-token')?.value
+    const userMetadata = request.cookies.get('sb-user-metadata')?.value
 
-      if (['/', '/login', '/signup'].includes(pathname)) {
+    if (accessToken) {
+      try {
+        const metadata = userMetadata ? JSON.parse(decodeURIComponent(userMetadata)) : {}
+        const role = metadata.role
+
         if (role === 'SUPERADMIN') {
           return NextResponse.redirect(new URL('/saas', request.url))
         }
         return NextResponse.redirect(new URL('/dashboard', request.url))
+      } catch {
+        // Invalid metadata, continue to auth page
       }
     }
-  } catch (error) {
-    console.error('Middleware auth error:', error)
   }
 
   return NextResponse.next()
