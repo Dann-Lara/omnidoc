@@ -34,6 +34,11 @@ export default function LoginPage() {
         return
       }
 
+      // Set cookies for middleware
+      document.cookie = `sb-access-token=${data.session?.access_token || ''}; path=/; SameSite=Lax`
+      document.cookie = `sb-refresh-token=${data.session?.refresh_token || ''}; path=/; SameSite=Lax`
+      document.cookie = `sb-user-metadata=${encodeURIComponent(JSON.stringify(data.user?.user_metadata || {}))}; path=/; SameSite=Lax`
+
       const role = data.user?.user_metadata?.role as string | undefined
 
       if (role === 'SUPERADMIN' || role === 'OPERATOR') {
@@ -53,22 +58,28 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: 'superadmin@omnidoc.dev',
         password: 'dev-superadmin-123',
       })
 
       if (authError) {
         setError(authError.message)
-      } else {
-        router.push('/saas')
+        setIsLoading(false)
+        return
       }
+
+      // Set cookies for middleware
+      document.cookie = `sb-access-token=${data.session?.access_token || ''}; path=/; SameSite=Lax`
+      document.cookie = `sb-refresh-token=${data.session?.refresh_token || ''}; path=/; SameSite=Lax`
+      document.cookie = `sb-user-metadata=${encodeURIComponent(JSON.stringify(data.user?.user_metadata || {}))}; path=/; SameSite=Lax`
+
+      router.push('/saas')
     } catch (err) {
       console.error('Dev login error:', err)
       setError('Unable to connect to authentication service. Please try again.')
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   return (
