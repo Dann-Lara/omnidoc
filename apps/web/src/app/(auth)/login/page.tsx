@@ -3,13 +3,14 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { motion } from 'framer-motion'
 import { Mail, Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react'
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:9999'
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+
 export default function LoginPage() {
   const router = useRouter()
-  const supabase = createClient()
   const isDev = process.env.NODE_ENV === 'development'
 
   const [email, setEmail] = useState('')
@@ -23,23 +24,29 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ email, password }),
       })
 
-      if (authError) {
-        setError(authError.message)
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.msg || 'Login failed')
         setIsLoading(false)
         return
       }
 
-      // Set cookies for middleware
-      document.cookie = `sb-access-token=${data.session?.access_token || ''}; path=/; SameSite=Lax`
-      document.cookie = `sb-refresh-token=${data.session?.refresh_token || ''}; path=/; SameSite=Lax`
-      document.cookie = `sb-user-metadata=${encodeURIComponent(JSON.stringify(data.user?.user_metadata || {}))}; path=/; SameSite=Lax`
+      // Set cookies
+      document.cookie = `sb-access-token=${data.access_token}; path=/; SameSite=Lax; max-age=3600`
+      document.cookie = `sb-refresh-token=${data.refresh_token}; path=/; SameSite=Lax; max-age=604800`
+      document.cookie = `sb-user-metadata=${encodeURIComponent(JSON.stringify(data.user?.user_metadata || {}))}; path=/; SameSite=Lax; max-age=3600`
 
-      const role = data.user?.user_metadata?.role as string | undefined
+      const role = data.user?.user_metadata?.role
 
       if (role === 'SUPERADMIN' || role === 'OPERATOR') {
         router.push('/saas')
@@ -53,30 +60,40 @@ export default function LoginPage() {
     }
   }
 
-  const handleDevSuperadminLogin = async () => {
+  const handleDevLogin = async () => {
+    await handleLoginInternal('superadmin@omnidoc.dev', 'dev-superadmin-123')
+  }
+
+  const handleLoginInternal = async (loginEmail: string, loginPassword: string) => {
     setIsLoading(true)
     setError('')
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: 'superadmin@omnidoc.dev',
-        password: 'dev-superadmin-123',
+      const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
       })
 
-      if (authError) {
-        setError(authError.message)
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.msg || 'Login failed')
         setIsLoading(false)
         return
       }
 
-      // Set cookies for middleware
-      document.cookie = `sb-access-token=${data.session?.access_token || ''}; path=/; SameSite=Lax`
-      document.cookie = `sb-refresh-token=${data.session?.refresh_token || ''}; path=/; SameSite=Lax`
-      document.cookie = `sb-user-metadata=${encodeURIComponent(JSON.stringify(data.user?.user_metadata || {}))}; path=/; SameSite=Lax`
+      // Set cookies
+      document.cookie = `sb-access-token=${data.access_token}; path=/; SameSite=Lax; max-age=3600`
+      document.cookie = `sb-refresh-token=${data.refresh_token}; path=/; SameSite=Lax; max-age=604800`
+      document.cookie = `sb-user-metadata=${encodeURIComponent(JSON.stringify(data.user?.user_metadata || {}))}; path=/; SameSite=Lax; max-age=3600`
 
       router.push('/saas')
     } catch (err) {
-      console.error('Dev login error:', err)
+      console.error('Login error:', err)
       setError('Unable to connect to authentication service. Please try again.')
       setIsLoading(false)
     }
@@ -163,7 +180,7 @@ export default function LoginPage() {
       {isDev && (
         <div className="border-t border-outline-variant pt-6">
           <button
-            onClick={handleDevSuperadminLogin}
+            onClick={handleDevLogin}
             disabled={isLoading}
             className="w-full py-3 px-6 rounded-lg font-semibold border-2 border-dashed border-primary text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
           >
