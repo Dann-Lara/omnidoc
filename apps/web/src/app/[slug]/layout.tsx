@@ -2,56 +2,60 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { UserRole } from '@/lib/auth'
 
 export default function TenantLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const params = useParams()
   const slug = params.slug as string
-  const supabase = createClient()
   const [isAuthorized, setIsAuthorized] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [userInfo, setUserInfo] = useState<{ name: string; role: string } | null>(null)
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (!user) {
+    const checkAuth = () => {
+      const userStr = localStorage.getItem('sb-user')
+      if (!userStr) {
         router.push(`/login?redirect=/${slug}`)
         return
       }
 
-      const role: string = user.user_metadata?.role || 'CLIENT'
-      const orgSlug: string = user.user_metadata?.org_slug || ''
+      try {
+        const user = JSON.parse(userStr)
+        const role = user.role || 'CLIENT'
+        const orgSlug = user.org_slug || ''
 
-      if (role === UserRole.SUPERADMIN || role === UserRole.OPERATOR) {
-        router.push('/admin')
-        return
+        if (role === UserRole.SUPERADMIN || role === UserRole.OPERATOR) {
+          router.push('/admin')
+          return
+        }
+
+        if (orgSlug && orgSlug !== slug) {
+          router.push(`/${orgSlug}`)
+          return
+        }
+
+        const firstName = user.first_name || ''
+        const lastName = user.last_name || ''
+        const fullName = `${firstName} ${lastName}`.trim() || user.email || 'User'
+
+        setUserInfo({ name: fullName, role })
+        setIsAuthorized(true)
+      } catch {
+        router.push('/login')
+      } finally {
+        setIsLoading(false)
       }
-
-      if (orgSlug && orgSlug !== slug) {
-        router.push(`/${orgSlug}`)
-        return
-      }
-
-      const firstName: string = user.user_metadata?.first_name || ''
-      const lastName: string = user.user_metadata?.last_name || ''
-      const fullName: string = `${firstName} ${lastName}`.trim() || user.email || 'User'
-
-      setUserInfo({ name: fullName, role })
-      setIsAuthorized(true)
-      setIsLoading(false)
     }
 
     checkAuth()
-  }, [router, slug, supabase])
+  }, [router, slug])
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
+  const handleLogout = () => {
+    localStorage.removeItem('sb-access-token')
+    localStorage.removeItem('sb-refresh-token')
+    localStorage.removeItem('sb-user')
     router.push('/login')
-    router.refresh()
   }
 
   if (isLoading) {
