@@ -8,7 +8,6 @@ import { Mail, Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:9999'
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-const IS_HTTPS = typeof window !== 'undefined' && window.location.protocol === 'https:'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -19,13 +18,11 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  // Dev button: solo pre-llena los campos
   const handleDevPrefill = () => {
     setEmail('superadmin@omnidoc.dev')
     setPassword('dev-superadmin-123')
   }
 
-  // Sign In: hace login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -45,6 +42,7 @@ export default function LoginPage() {
           'apikey': SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({ email, password }),
+        credentials: 'omit',
       })
 
       const data = await response.json()
@@ -55,21 +53,16 @@ export default function LoginPage() {
         return
       }
 
-      // Set cookies SIN Secure flag en desarrollo (localhost usa HTTP)
-      const cookieOptions = IS_HTTPS ? '; Secure' : ''
-      
-      document.cookie = `sb-access-token=${data.access_token}; path=/; SameSite=Lax; max-age=3600${cookieOptions}`
-      document.cookie = `sb-refresh-token=${data.refresh_token}; path=/; SameSite=Lax; max-age=604800${cookieOptions}`
-      document.cookie = `sb-user-metadata=${encodeURIComponent(JSON.stringify(data.user?.user_metadata || {}))}; path=/; SameSite=Lax; max-age=3600${cookieOptions}`
-
-      // Guardar role en localStorage también (backup)
+      // Guardar SOLO en localStorage (las cookies Secure no funcionan en HTTP localhost)
+      localStorage.setItem('sb-access-token', data.access_token || '')
+      localStorage.setItem('sb-refresh-token', data.refresh_token || '')
+      localStorage.setItem('sb-user', JSON.stringify(data.user || {}))
       localStorage.setItem('sb-role', data.user?.user_metadata?.role || '')
       localStorage.setItem('sb-email', data.user?.email || '')
       localStorage.setItem('sb-user-id', data.user?.id || '')
 
       const role = data.user?.user_metadata?.role
 
-      // Redirect basado en role
       if (role === 'SUPERADMIN' || role === 'OPERATOR') {
         router.push('/saas')
       } else {
@@ -77,7 +70,7 @@ export default function LoginPage() {
       }
     } catch (err) {
       console.error('Login error:', err)
-      setError('Unable to connect to authentication service. Please try again.')
+      setError('Unable to connect to authentication service')
       setIsLoading(false)
     }
   }

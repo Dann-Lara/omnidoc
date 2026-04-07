@@ -9,11 +9,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const cookies = document.cookie.split(';')
-    const accessToken = cookies.find(c => c.trim().startsWith('sb-access-token='))
     const role = localStorage.getItem('sb-role')
+    const userId = localStorage.getItem('sb-user-id')
     
-    if (accessToken || role) {
+    if (userId) {
       setIsAuthorized(true)
     } else {
       router.push('/login')
@@ -44,10 +43,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </span>
             <button
               onClick={() => {
-                document.cookie = 'sb-access-token=; Max-Age=0'
-                document.cookie = 'sb-refresh-token=; Max-Age=0'
-                document.cookie = 'sb-user-metadata=; Max-Age=0'
-                localStorage.clear()
+                localStorage.removeItem('sb-access-token')
+                localStorage.removeItem('sb-refresh-token')
+                localStorage.removeItem('sb-user')
+                localStorage.removeItem('sb-role')
+                localStorage.removeItem('sb-email')
+                localStorage.removeItem('sb-user-id')
                 router.push('/login')
               }}
               className="text-sm hover:underline"
