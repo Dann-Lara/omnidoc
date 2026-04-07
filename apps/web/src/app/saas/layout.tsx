@@ -13,7 +13,6 @@ export default function SaaSLayout({ children }: { children: React.ReactNode }) 
     if (role === 'SUPERADMIN' || role === 'OPERATOR') {
       setIsAuthorized(true)
     } else {
-      // Verificar cookies
       const cookies = document.cookie.split(';')
       const accessToken = cookies.find(c => c.trim().startsWith('sb-access-token='))
       if (accessToken) {
@@ -44,7 +43,7 @@ export default function SaaSLayout({ children }: { children: React.ReactNode }) 
           <h1 className="text-xl font-bold">OmniDoc SaaS Admin</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm opacity-80">
-              {typeof window !== 'undefined' ? localStorage.getItem('sb-email') : ''}
+              {localStorage.getItem('sb-email') || ''}
             </span>
             <button
               onClick={() => {
