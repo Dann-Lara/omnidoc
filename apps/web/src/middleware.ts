@@ -1,51 +1,70 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.next()
-  }
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          )
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
 
-  const protectedPaths = ['/dashboard', '/saas', '/tenant', '/settings']
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   const authPaths = ['/login', '/signup']
-
-  const isProtected = protectedPaths.some(p => pathname.startsWith(p))
   const isAuthPage = authPaths.some(p => pathname === p)
+  
+  const isAdminPath = pathname.startsWith('/admin')
+  const isTenantPath = pathname.match(/^\/[a-z0-9-]+$/i) && pathname !== '/admin' && pathname !== '/login' && pathname !== '/signup' && pathname !== '/'
 
-  // For protected routes, check for auth cookie
-  if (isProtected) {
-    const accessToken = request.cookies.get('sb-access-token')?.value
-    const refreshToken = request.cookies.get('sb-refresh-token')?.value
-
-    if (!accessToken && !refreshToken) {
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
+  if (!user && (isAdminPath || isTenantPath)) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    url.searchParams.set('redirect', pathname)
+    return NextResponse.redirect(url)
   }
 
-  // For auth pages, if user has tokens, redirect based on role
-  if (isAuthPage) {
-    const accessToken = request.cookies.get('sb-access-token')?.value
-    const userMetadata = request.cookies.get('sb-user-metadata')?.value
+  if (user && isAuthPage) {
+    const url = request.nextUrl.clone()
+    
+    const { data: userData } = await supabase.auth.getUser()
+    const role = userData.user?.user_metadata?.role
 
-    if (accessToken) {
-      try {
-        const metadata = userMetadata ? JSON.parse(decodeURIComponent(userMetadata)) : {}
-        const role = metadata.role
-
-        if (role === 'SUPERADMIN') {
-          return NextResponse.redirect(new URL('/saas', request.url))
-        }
-        return NextResponse.redirect(new URL('/dashboard', request.url))
-      } catch {
-        // Invalid metadata, continue to auth page
-      }
+    if (role === 'SUPERADMIN' || role === 'OPERATOR') {
+      url.pathname = '/admin'
+    } else {
+      const orgSlug = userData.user?.user_metadata?.org_slug
+      url.pathname = orgSlug ? `/${orgSlug}` : '/admin'
     }
+
+    return NextResponse.redirect(url)
   }
 
-  return NextResponse.next()
+  return supabaseResponse
 }
 
 export const config = {
