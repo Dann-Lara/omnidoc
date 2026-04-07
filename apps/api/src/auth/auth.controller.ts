@@ -4,11 +4,6 @@ import { ConfigService } from '@nestjs/config';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { UserRole } from './types/user.types';
 
-class LoginDto {
-  email: string;
-  password: string;
-}
-
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -20,7 +15,7 @@ export class AuthController {
     private readonly configService: ConfigService,
   ) {
     this.supabaseUrl = this.configService.get<string>('SUPABASE_URL') || 'http://localhost:9999';
-    this.supabaseAdminKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY') || '';
+    this.supabaseAdminKey = this.configService.get<string>('SUPABASE_ANON_KEY') || '';
   }
 
   @Post('login')
@@ -28,32 +23,40 @@ export class AuthController {
   @ApiOperation({ summary: 'Login user' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Body() dto: LoginDto) {
-    this.logger.log(`Login attempt for email: ${dto.email}`);
+  async login(@Body() body: { email?: string; password?: string }) {
+    const email = body?.email;
+    const password = body?.password;
+    
+    this.logger.log(`Login attempt for email: ${email}`);
+
+    if (!email || !password) {
+      return { error: 'Email and password are required', status: 400 };
+    }
 
     try {
-      const response = await fetch(`${this.supabaseUrl}/auth/v1/token?grant_type=password`, {
+      const url = `${this.supabaseUrl}/auth/v1/token?grant_type=password`;
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': this.supabaseAdminKey,
         },
         body: JSON.stringify({
-          email: dto.email,
-          password: dto.password,
+          email,
+          password,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        this.logger.warn(`Login failed for ${dto.email}: ${data.msg}`);
-        return { error: data.msg || 'Invalid credentials', status: response.status };
+        this.logger.warn(`Login failed for ${email}: ${JSON.stringify(data)}`);
+        return { error: data.error_description || data.error || 'Invalid credentials', status: response.status };
       }
 
       const role = this.extractRole(data.user?.user_metadata);
-
-      this.logger.log(`Login successful for: ${dto.email}, role: ${role}`);
+      this.logger.log(`Extracted role: ${role}`);
 
       const loginResponse = new LoginResponseDto({
         access_token: data.access_token,
@@ -69,6 +72,7 @@ export class AuthController {
         },
       });
 
+      this.logger.log(`Login successful for: ${email}, role: ${role}`);
       return loginResponse;
     } catch (error) {
       this.logger.error(`Login error: ${error}`);
@@ -81,8 +85,15 @@ export class AuthController {
   @ApiOperation({ summary: 'Create a new user (signup)' })
   @ApiResponse({ status: 201, description: 'User created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input' })
-  async signup(@Body() dto: { email: string; password: string; firstName: string; lastName: string }) {
-    this.logger.log(`Signup attempt for email: ${dto.email}`);
+  async signup(@Body() body: { email?: string; password?: string; firstName?: string; lastName?: string }) {
+    const email = body?.email;
+    const password = body?.password;
+    
+    this.logger.log(`Signup attempt for email: ${email}`);
+
+    if (!email || !password) {
+      return { error: 'Email and password are required', status: 400 };
+    }
 
     try {
       const response = await fetch(`${this.supabaseUrl}/auth/v1/signup`, {
@@ -92,12 +103,12 @@ export class AuthController {
           'apikey': this.supabaseAdminKey,
         },
         body: JSON.stringify({
-          email: dto.email,
-          password: dto.password,
+          email,
+          password,
           options: {
             data: {
-              first_name: dto.firstName,
-              last_name: dto.lastName,
+              first_name: body.firstName,
+              last_name: body.lastName,
             },
           },
         }),
@@ -106,11 +117,11 @@ export class AuthController {
       const data = await response.json();
 
       if (!response.ok) {
-        this.logger.warn(`Signup failed for ${dto.email}: ${data.msg}`);
-        return { error: data.msg || 'Signup failed' };
+        this.logger.warn(`Signup failed for ${email}: ${data.msg}`);
+        return { error: data.msg || data.error || 'Signup failed' };
       }
 
-      this.logger.log(`Signup successful for: ${dto.email}`);
+      this.logger.log(`Signup successful for: ${email}`);
 
       return {
         user: data.user,
