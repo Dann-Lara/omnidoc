@@ -9,7 +9,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Verificar cookies o localStorage
     const cookies = document.cookie.split(';')
     const accessToken = cookies.find(c => c.trim().startsWith('sb-access-token='))
     const role = localStorage.getItem('sb-role')
@@ -41,7 +40,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <h1 className="text-xl font-bold">OmniDoc Dashboard</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm opacity-80">
-              {typeof window !== 'undefined' ? localStorage.getItem('sb-email') : ''}
+              {localStorage.getItem('sb-email') || ''}
             </span>
             <button
               onClick={() => {
