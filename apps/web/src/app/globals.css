@@ -25,6 +25,23 @@
   --color-error-container: #ffdAD6;
   --color-success: #006E2C;
 
+  /* shadcn/ui compatibility */
+  --color-background: var(--color-surface);
+  --color-foreground: var(--color-on-surface);
+  --color-card: var(--color-surface-container-lowest);
+  --color-card-foreground: var(--color-on-surface);
+  --color-popover: var(--color-surface-container-lowest);
+  --color-popover-foreground: var(--color-on-surface);
+  --color-muted: var(--color-surface-container);
+  --color-muted-foreground: var(--color-on-surface-variant);
+  --color-accent: var(--color-surface-container-high);
+  --color-accent-foreground: var(--color-on-surface);
+  --color-border: var(--color-outline-variant);
+  --color-input: var(--color-outline);
+  --color-ring: var(--color-primary);
+  --color-destructive: var(--color-error);
+  --color-destructive-foreground: #ffffff;
+
   /* Typography */
   --font-headline: "Manrope", system-ui, sans-serif;
   --font-body: "Inter", system-ui, sans-serif;
@@ -61,6 +78,23 @@
   --color-surface-tint: #7ab8e8;
   --color-error: #ffb4ab;
   --color-error-container: #93000a;
+
+  /* shadcn/ui dark mode */
+  --color-background: var(--color-surface);
+  --color-foreground: var(--color-on-surface);
+  --color-card: var(--color-surface-container-lowest);
+  --color-card-foreground: var(--color-on-surface);
+  --color-popover: var(--color-surface-container-lowest);
+  --color-popover-foreground: var(--color-on-surface);
+  --color-muted: var(--color-surface-container);
+  --color-muted-foreground: var(--color-on-surface-variant);
+  --color-accent: var(--color-surface-container-high);
+  --color-accent-foreground: var(--color-on-surface);
+  --color-border: var(--color-outline-variant);
+  --color-input: var(--color-outline);
+  --color-ring: var(--color-primary);
+  --color-destructive: var(--color-error);
+  --color-destructive-foreground: #001c37;
 }
 
 /* Base styles */
@@ -70,8 +104,8 @@ html {
 
 body {
   font-family: var(--font-body);
-  background-color: var(--color-surface);
-  color: var(--color-on-surface);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
 }
 
 /* Custom selection */
