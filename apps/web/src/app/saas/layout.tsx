@@ -13,13 +13,7 @@ export default function SaaSLayout({ children }: { children: React.ReactNode }) 
     if (role === 'SUPERADMIN' || role === 'OPERATOR') {
       setIsAuthorized(true)
     } else {
-      const cookies = document.cookie.split(';')
-      const accessToken = cookies.find(c => c.trim().startsWith('sb-access-token='))
-      if (accessToken) {
-        setIsAuthorized(true)
-      } else {
-        router.push('/login')
-      }
+      router.push('/login')
     }
     setIsLoading(false)
   }, [router])
@@ -47,10 +41,12 @@ export default function SaaSLayout({ children }: { children: React.ReactNode }) 
             </span>
             <button
               onClick={() => {
-                document.cookie = 'sb-access-token=; Max-Age=0'
-                document.cookie = 'sb-refresh-token=; Max-Age=0'
-                document.cookie = 'sb-user-metadata=; Max-Age=0'
-                localStorage.clear()
+                localStorage.removeItem('sb-access-token')
+                localStorage.removeItem('sb-refresh-token')
+                localStorage.removeItem('sb-user')
+                localStorage.removeItem('sb-role')
+                localStorage.removeItem('sb-email')
+                localStorage.removeItem('sb-user-id')
                 router.push('/login')
               }}
               className="text-sm hover:underline"
