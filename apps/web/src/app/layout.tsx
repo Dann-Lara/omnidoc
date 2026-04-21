@@ -1,20 +1,27 @@
-import type { Metadata } from 'next';
-import { Manrope, Inter } from 'next/font/google';
-import { LanguageProvider } from '@/lib/context/LanguageContext';
-import { ThemeProvider } from '@/components/ThemeProvider';
-import './globals.css';
+import type { Metadata } from 'next'
+import { Manrope, Inter } from 'next/font/google'
+import { I18nProvider } from '@/lib/i18n'
+import { ThemeProvider } from '@/components/ThemeProvider'
+import { AuthProviderWrapper } from '@/components/AuthProviderWrapper'
+import './globals.css'
 
 const manrope = Manrope({
   subsets: ['latin'],
   variable: '--font-headline',
   display: 'swap',
-});
+})
 
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-body',
   display: 'swap',
-});
+})
+
+const materialSymbols = {
+  variable: '--font-material',
+  subsets: ['latin'],
+  display: 'swap',
+}
 
 export const metadata: Metadata = {
   title: 'OmniDoc | Clinical Operating System',
@@ -36,24 +43,30 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
   },
-};
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        />
+      </head>
       <body
-        className={`${manrope.variable} ${inter.variable} antialiased min-h-screen flex flex-col`}
+        className={`${manrope.variable} ${inter.variable} antialiased min-h-screen flex flex-col light`}
       >
-        <LanguageProvider>
-          <ThemeProvider>
+        <AuthProviderWrapper>
+          <I18nProvider>
             {children}
-          </ThemeProvider>
-        </LanguageProvider>
+          </I18nProvider>
+        </AuthProviderWrapper>
       </body>
     </html>
-  );
+  )
 }

@@ -9,7 +9,7 @@ export interface SyncUserData {
   lastName: string;
   organizationId?: string;
   roleId?: string;
-  isTenantAdmin?: boolean;
+  userType?: string;
 }
 
 @Injectable()
@@ -44,7 +44,7 @@ export class AuthService {
         lastName: data.lastName,
         organizationId: data.organizationId || '',
         roleId: data.roleId || '',
-        isTenantAdmin: data.isTenantAdmin || false,
+        userType: data.userType || 'COLLABORATOR',
       },
     });
   }
@@ -74,12 +74,13 @@ export class AuthService {
 
     return {
       userId: user.id,
-      role: user.role.name,
+      role: user.userType,
       roleId: user.roleId,
       organizationId: user.organizationId,
       organizationSlug: user.organization.slug,
-      isTenantAdmin: user.isTenantAdmin,
-      permissions: user.role.permissions,
+      userType: user.userType,
+      subtype: user.subtype,
+      permissions: user.role?.permissions || [],
     };
   }
 

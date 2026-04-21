@@ -1,8 +1,8 @@
 export enum UserRole {
   SUPERADMIN = 'SUPERADMIN',
   OPERATOR = 'OPERATOR',
-  CLIENT = 'CLIENT',
-  SUBORDINATE = 'SUBORDINATE',
+  OWNER = 'OWNER',
+  COLLABORATOR = 'COLLABORATOR',
 }
 
 export enum AppRoute {
@@ -40,12 +40,12 @@ export class User {
     return this.user.user_metadata?.role === UserRole.OPERATOR;
   }
 
-  isClient(): boolean {
-    return this.user.user_metadata?.role === UserRole.CLIENT;
+  isOwner(): boolean {
+    return this.user.user_metadata?.role === UserRole.OWNER;
   }
 
-  isSubordinate(): boolean {
-    return this.user.user_metadata?.role === UserRole.SUBORDINATE;
+  isCollaborator(): boolean {
+    return this.user.user_metadata?.role === UserRole.COLLABORATOR;
   }
 
   isSaaSUser(): boolean {
@@ -53,7 +53,7 @@ export class User {
   }
 
   isTenantUser(): boolean {
-    return this.isClient() || this.isSubordinate();
+    return this.isOwner() || this.isCollaborator();
   }
 
   getDashboardRoute(): AppRoute {

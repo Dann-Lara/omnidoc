@@ -12,6 +12,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
+    "dev:check": "turbo run lint",
     "db:migrate": "turbo run db:migrate",
     "db:seed": "turbo run db:seed",
     "setup": "pnpm install && node scripts/setup-supabase.js && pnpm db:migrate && pnpm db:seed",

@@ -51,7 +51,7 @@ export class OnboardingService {
     const ownerRole = await this.prisma.role.create({
       data: {
         organizationId: organization.id,
-        name: 'owner',
+        name: 'OWNER',
         permissions: [
           'appointments:read',
           'appointments:write',
@@ -65,9 +65,8 @@ export class OnboardingService {
           'analytics:view',
           'settings:manage',
         ],
-        isDefault: true,
       },
-});
+    });
     
     let supabaseUser;
     try {
@@ -97,7 +96,7 @@ export class OnboardingService {
         firstName: data.firstName,
         lastName: data.lastName,
         specialty: data.specialty,
-        isTenantAdmin: true,
+        userType: 'OWNER',
       },
     });
 

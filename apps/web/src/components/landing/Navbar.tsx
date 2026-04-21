@@ -1,11 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect, useSyncExternalStore } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Globe, Moon, Sun } from 'lucide-react';
-import { useTheme } from 'next-themes';
-import { useLanguage } from '@/lib/context/LanguageContext';
+import { useI18n } from '@/lib/i18n';
 
 const translations = {
   en: {
@@ -24,16 +23,60 @@ const translations = {
   },
 };
 
-const emptySubscribe = () => () => {};
-const getSnapshot = () => true;
-const getServerSnapshot = () => false;
+function ThemeToggle() {
+  const [isDark, setIsDark] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    const stored = localStorage.getItem('omnidoc-theme')
+    if (stored === 'dark') {
+      setIsDark(true)
+      document.documentElement.classList.add('dark')
+    } else if (!stored) {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      setIsDark(prefersDark)
+      if (prefersDark) {
+        document.documentElement.classList.add('dark')
+      }
+    } else {
+      setIsDark(false)
+    }
+  }, [])
+
+  const toggleTheme = () => {
+    const newIsDark = !isDark
+    setIsDark(newIsDark)
+    localStorage.setItem('omnidoc-theme', newIsDark ? 'dark' : 'light')
+    if (newIsDark) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }
+
+  if (!mounted) {
+    return <div className="w-9 h-9" />
+  }
+
+  return (
+    <button
+      onClick={toggleTheme}
+      className="p-2 rounded-lg hover:bg-surface-container transition-colors"
+    >
+      {isDark ? (
+        <Sun className="w-5 h-5" />
+      ) : (
+        <Moon className="w-5 h-5" />
+      )}
+    </button>
+  )
+}
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const mounted = useSyncExternalStore(emptySubscribe, getSnapshot, getServerSnapshot);
-  const { lang, toggleLang } = useLanguage();
-  const { setTheme, resolvedTheme } = useTheme();
+  const { lang, toggleLang } = useI18n();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -78,18 +121,7 @@ export function Navbar() {
               <span className="text-sm font-medium uppercase">{lang}</span>
             </button>
 
-            {mounted && (
-              <button
-                onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-                className="p-2 rounded-lg hover:bg-surface-container transition-colors"
-              >
-                {resolvedTheme === 'dark' ? (
-                  <Sun className="w-5 h-5" />
-                ) : (
-                  <Moon className="w-5 h-5" />
-                )}
-              </button>
-            )}
+            <ThemeToggle />
 
             <motion.div className="hidden md:flex items-center gap-3">
               <Link
