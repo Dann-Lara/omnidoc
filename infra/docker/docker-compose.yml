@@ -28,6 +28,7 @@ services:
       API_EXTERNAL_URL: ${API_EXTERNAL_URL:-http://localhost:9999}
       GOTRUE_DB_DRIVER: postgres
       GOTRUE_DB_DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
+      GOTRUE_DB_AUTOMIGRATE: "false"
       GOTRUE_SITE_URL: ${APP_URL:-http://localhost:3000}
       GOTRUE_JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production-min-32-chars}
       GOTRUE_JWT_EXP: 3600

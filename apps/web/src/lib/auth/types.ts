@@ -1,14 +1,14 @@
 export enum UserRole {
   SUPERADMIN = 'SUPERADMIN',
   OPERATOR = 'OPERATOR',
-  CLIENT = 'CLIENT',
-  SUBORDINATE = 'SUBORDINATE',
+  OWNER = 'OWNER',
+  COLLABORATOR = 'COLLABORATOR',
 }
 
 export enum AppRoute {
   ADMIN = '/admin',
-  TENANT = '/tenant',
   LOGIN = '/login',
+  DASHBOARD = '/dashboard',
 }
 
 export interface SupabaseUser {
@@ -27,29 +27,45 @@ export interface AuthSession {
   expires_in: number;
   expires_at: number;
   user: UserInfo;
+  organization?: OrganizationInfo;
 }
 
 export interface UserInfo {
   id: string;
   email: string;
   role: UserRole | null;
+  org_id: string | null;
   first_name: string | null;
   last_name: string | null;
+  avatar: string | null;
+  subtype: string | null;
+}
+
+export interface OrganizationInfo {
+  org_id: string;
+  org_slug: string;
+  org_name: string;
+  specialties: string[];
 }
 
 export interface LoginResponse {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-  expires_at: number;
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  expires_at?: number;
   user: UserInfo;
-  dashboard_route: AppRoute;
-  message: string;
+  organization?: OrganizationInfo | null;
+  dashboard_route?: string;
+  message?: string;
   error?: string;
 }
 
 export class User {
-  constructor(private user: UserInfo) {}
+  private organization: OrganizationInfo | null = null;
+
+  constructor(private user: UserInfo, organization?: OrganizationInfo) {
+    this.organization = organization || null;
+  }
 
   isSuperadmin(): boolean {
     return this.user.role === UserRole.SUPERADMIN;
@@ -60,23 +76,38 @@ export class User {
   }
 
   isClient(): boolean {
-    return this.user.role === UserRole.CLIENT;
+    return this.user.role === UserRole.OWNER;
   }
 
   isSubordinate(): boolean {
-    return this.user.role === UserRole.SUBORDINATE;
+    return this.user.role === UserRole.COLLABORATOR;
+  }
+
+  isOwner(): boolean {
+    return this.user.role === UserRole.OWNER;
+  }
+
+  isCollaborator(): boolean {
+    return this.user.role === UserRole.COLLABORATOR;
+  }
+
+  isTenantUser(): boolean {
+    return this.isClient() || this.isCollaborator();
   }
 
   isSaaSUser(): boolean {
     return this.isSuperadmin() || this.isOperator();
   }
 
-  isTenantUser(): boolean {
-    return this.isClient() || this.isSubordinate();
-  }
-
-  getDashboardRoute(): AppRoute {
-    return this.isSaaSUser() ? AppRoute.ADMIN : AppRoute.TENANT;
+  getDashboardRoute(): string {
+    if (this.isSaaSUser()) {
+      return AppRoute.ADMIN
+    }
+    if (this.organization?.org_slug) {
+      return `/${this.organization.org_slug}/dashboard`
+    }
+    const first = this.user.first_name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'user'
+    return `/${first}/dashboard`
   }
 
   getRole(): UserRole | null {
@@ -88,8 +119,20 @@ export class User {
     const last = this.user.last_name || '';
     return `${first} ${last}`.trim() || this.user.email;
   }
+
+  getOrgId(): string | null {
+    return this.user.org_id;
+  }
+
+  getOrgSlug(): string | null {
+    return this.organization?.org_slug || null;
+  }
+
+  getSpecialties(): string[] {
+    return this.organization?.specialties || [];
+  }
 }
 
-export function createUser(user: UserInfo): User {
-  return new User(user);
+export function createUser(user: UserInfo, organization?: OrganizationInfo): User {
+  return new User(user, organization);
 }

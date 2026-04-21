@@ -124,7 +124,7 @@ async function startDocker() {
 
   log('Waiting for services to be ready...');
 
-  execSync('until docker exec omnidoc-postgres pg_isready -U omnidoc > /dev/null 2>&1; do sleep 1; done', {
+  execSync('until docker exec omnidoc-postgres pg_isready -U postgres > /dev/null 2>&1; do sleep 1; done', {
     stdio: 'pipe',
     shell: '/bin/bash',
   });
@@ -141,6 +141,31 @@ async function startDocker() {
     shell: '/bin/bash',
   });
   log('Redis is ready');
+}
+
+async function fixGoTrueMigrations() {
+  log('Fixing GoTrue migrations...');
+
+  try {
+    execSync(`docker exec omnidoc-postgres psql -U postgres -d postgres -c "
+      -- Add auth to search_path for gotrue
+      ALTER DATABASE postgres SET search_path TO \\$user, public, auth, extensions;
+      
+      -- Mark problematic migration as applied
+      INSERT INTO auth.schema_migrations (version) VALUES ('20221208132122_backfill_email_last_sign_in_at') ON CONFLICT DO NOTHING;
+    "`, {
+      stdio: 'pipe',
+    });
+
+    execSync('docker restart omnidoc-postgres', { stdio: 'pipe' });
+    execSync('sleep 5', { stdio: 'pipe', shell: '/bin/bash' });
+    execSync('docker restart omnidoc-auth', { stdio: 'pipe' });
+    execSync('sleep 3', { stdio: 'pipe', shell: '/bin/bash' });
+    
+    log('GoTrue migrations fixed and services restarted');
+  } catch (error) {
+    log('Error fixing migrations (may already be fixed): ' + error.message, 'warn');
+  }
 }
 
 async function runMigrations() {
@@ -181,6 +206,7 @@ async function main() {
   try {
     await setupEnvFiles();
     await startDocker();
+    await fixGoTrueMigrations();
     await runMigrations();
     await runSeed();
 

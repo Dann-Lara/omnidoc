@@ -5,30 +5,70 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Mail, Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react'
-import { UserRole } from '@/lib/auth'
+import { useI18n } from '@/lib/i18n'
+import { UserRole, saveAuthSession } from '@/lib/auth'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams.get('redirect')
+  const { lang, t } = useI18n()
+  const emailConfirmed = searchParams.get('confirmed') === 'true'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleDevPrefill = () => {
-    setEmail('superadmin@omnidoc.dev')
-    setPassword('dev-superadmin-123')
+  const labels = {
+    title: t('auth.login.title'),
+    subtitle: t('auth.login.subtitle'),
+    email: t('auth.login.email'),
+    emailPlaceholder: t('auth.login.emailPlaceholder'),
+    password: t('auth.login.password'),
+    passwordPlaceholder: t('auth.login.passwordPlaceholder'),
+    submit: t('auth.login.submit'),
+    signingIn: t('auth.login.signingIn'),
+    devPrefill: t('auth.login.devPrefill'),
+    devHint: t('auth.login.devHint'),
+    noAccount: t('auth.login.noAccount'),
+    createOne: t('auth.login.createOne'),
+    errors: {
+      required: t('auth.login.errors.required'),
+      network: t('auth.login.errors.network'),
+    },
   }
 
-  const getDashboardRoute = (role: string | undefined) => {
+  const handleDevPrefill = (type: 'superadmin' | 'operator' | 'tenant' | 'sub') => {
+    if (type === 'superadmin') {
+      setEmail('superadmin@omnidoc.dev')
+      setPassword('dev-superadmin-123')
+    } else if (type === 'operator') {
+      setEmail('operator@omnidoc.dev')
+      setPassword('dev-operator-123')
+    } else if (type === 'tenant') {
+      setEmail('dann@opendoc.com')
+      setPassword('Dann92Operator')
+    }
+    else {
+      setEmail('dkubdannspc@gmail.com')
+      setPassword('Dann92Operator')
+    }
+  }
+
+  const getDashboardRoute = (role: string | undefined, orgSlug: string | undefined | null, firstName: string | undefined) => {
     if (role === UserRole.SUPERADMIN || role === UserRole.OPERATOR) {
       return '/admin'
     }
-    return '/tenant'
+    if (orgSlug) {
+      return `/${orgSlug}/dashboard`
+    }
+    if (firstName) {
+      const slug = firstName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      return `/${slug}/dashboard`
+    }
+    return '/admin'
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -36,7 +76,7 @@ function LoginForm() {
     setError('')
 
     if (!email || !password) {
-      setError('Please enter email and password')
+      setError(labels.errors.required)
       return
     }
 
@@ -48,26 +88,30 @@ function LoginForm() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       })
 
       const data = await response.json()
 
       if (!response.ok || data.error) {
-        setError(data.error || `Login failed (${response.status})`)
+        setError(data.error || 'Login failed')
         setIsLoading(false)
         return
       }
 
-      localStorage.setItem('sb-access-token', data.access_token)
-      localStorage.setItem('sb-refresh-token', data.refresh_token)
-      localStorage.setItem('sb-user', JSON.stringify(data.user))
+      // Tokens are now in HttpOnly cookies (set by backend)
+      // Only save user data to localStorage
+      saveAuthSession(data)
 
-      const destination = redirect || getDashboardRoute(data.user?.role)
-      router.push(destination)
+      const redirectParam = searchParams.get('redirect')
+      const destination = redirectParam || data.dashboard_route || getDashboardRoute(data.user?.role, data.organization?.org_slug, data.user?.first_name)
+      
+      // Use window.location to ensure localStorage is fully written before navigation
+      window.location.href = destination
     } catch (err) {
       console.error('Login error:', err)
-      setError('Unable to connect to authentication service')
+      setError(labels.errors.network)
     } finally {
       setIsLoading(false)
     }
@@ -81,10 +125,10 @@ function LoginForm() {
           animate={{ opacity: 1, y: 0 }}
           className="text-3xl font-bold text-on-surface mb-2"
         >
-          Welcome back
+          {labels.title}
         </motion.h2>
         <p className="text-on-surface-variant">
-          Sign in to access your clinical dashboard
+          {labels.subtitle}
         </p>
       </div>
 
@@ -95,10 +139,24 @@ function LoginForm() {
         </div>
       )}
 
+      {emailConfirmed && (
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 flex items-start gap-3">
+          <Mail className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-green-800 dark:text-green-200">
+              {t('auth.login.emailConfirmed')}
+            </p>
+            <p className="text-sm text-green-700 dark:text-green-300">
+              {t('auth.login.emailConfirmedDesc')}
+            </p>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleLogin} className="space-y-6">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-on-surface mb-2">
-            Email
+            {labels.email}
           </label>
           <div className="relative">
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant" />
@@ -108,7 +166,7 @@ function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-              placeholder="doctor@clinic.com"
+              placeholder={labels.emailPlaceholder}
               required
             />
           </div>
@@ -116,7 +174,7 @@ function LoginForm() {
 
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-on-surface mb-2">
-            Password
+            {labels.password}
           </label>
           <div className="relative">
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant" />
@@ -126,7 +184,7 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-              placeholder="Enter your password"
+              placeholder={labels.passwordPlaceholder}
               required
             />
           </div>
@@ -140,11 +198,11 @@ function LoginForm() {
           {isLoading ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              Signing in...
+              {labels.signingIn}
             </>
           ) : (
             <>
-              Sign In
+              {labels.submit}
               <ArrowRight className="w-5 h-5" />
             </>
           )}
@@ -154,21 +212,47 @@ function LoginForm() {
       <div className="border-t border-outline-variant pt-6">
         <button
           type="button"
-          onClick={handleDevPrefill}
+          onClick={() => handleDevPrefill('superadmin')}
           className="w-full py-3 px-6 rounded-lg font-semibold border-2 border-dashed border-primary text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-2"
         >
-          Dev: Pre-fill Superadmin Credentials
+          {labels.devPrefill}
+        </button>
+        <button
+          type="button"
+          onClick={() => handleDevPrefill('operator')}
+          className="w-full mt-2 py-3 px-6 rounded-lg font-semibold border-2 border-dashed border-secondary text-secondary hover:bg-secondary/5 transition-colors flex items-center justify-center gap-2"
+        >
+          {labels.devPrefill2}
+        </button>
+        <button
+          type="button"
+          onClick={() => handleDevPrefill('tenant')}
+          className="w-full mt-2 py-3 px-6 rounded-lg font-semibold border-2 border-dashed border-tertiary text-tertiary hover:bg-tertiary/5 transition-colors flex items-center justify-center gap-2"
+        >
+          {labels.devPrefill3}
+        </button>
+        <button
+          type="button"
+          onClick={() => handleDevPrefill('sub')}
+          className="w-full mt-2 py-3 px-6 rounded-lg font-semibold border-2 border-dashed border-tertiary text-tertiary hover:bg-tertiary/5 transition-colors flex items-center justify-center gap-2"
+        >
+          {labels.devPrefill3}
         </button>
         <p className="text-xs text-on-surface-variant mt-2 text-center">
-          Click to fill credentials, then click Sign In
+          {labels.devHint}
         </p>
       </div>
 
-      <div className="text-center">
+      <div className="text-center space-y-3">
         <p className="text-sm text-on-surface-variant">
-          Don&apos;t have an account?{' '}
+          <Link href="/forgot-password" className="text-primary font-semibold hover:underline">
+            {t('auth.login.forgotPassword')}
+          </Link>
+        </p>
+        <p className="text-sm text-on-surface-variant">
+          {labels.noAccount}{' '}
           <Link href="/signup" className="text-primary font-semibold hover:underline">
-            Create one
+            {labels.createOne}
           </Link>
         </p>
       </div>

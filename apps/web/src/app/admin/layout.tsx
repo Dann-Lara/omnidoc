@@ -2,14 +2,22 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, isAuthenticated, clearAuthSession, getStoredUser } from '@/lib/auth'
+import { motion, AnimatePresence } from 'framer-motion'
+import { isAuthenticated, getStoredUser, getStoredOrgSlug, useAuth } from '@/lib/auth'
+import { AdminSidebar } from './components/AdminSidebar'
+import { AdminNavbar } from './components/AdminNavbar'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const { user: authUser, isLoading: authLoading } = useAuth()
   const [isAuthorized, setIsAuthorized] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLayoutLoading, setIsLayoutLoading] = useState(true)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
 
   useEffect(() => {
+    if (authLoading) return
+
     if (!isAuthenticated()) {
       router.push('/login')
       return
@@ -21,21 +29,70 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return
     }
 
-    const user = new User(storedUser)
+    const user = authUser || storedUser
+    if (!user) {
+      router.push('/login')
+      return
+    }
 
-    if (!user.isSaaSUser()) {
-      router.push('/tenant')
+    const userRole = user.role
+    const userOrgSlug = getStoredOrgSlug()
+    if (userRole !== 'SUPERADMIN' && userRole !== 'OPERATOR') {
+      if (userOrgSlug) {
+        router.push(`/${userOrgSlug}/dashboard`)
+      } else if (user.first_name) {
+        const slug = user.first_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+        router.push(`/${slug}/dashboard`)
+      } else {
+        router.push('/login')
+      }
       return
     }
 
     setIsAuthorized(true)
-    setIsLoading(false)
-  }, [router])
+    setIsLayoutLoading(false)
+  }, [router, authLoading, authUser])
 
-  if (isLoading) {
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsSidebarOpen(false)
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  if (authLoading || isLayoutLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
-        <div className="text-primary">Loading...</div>
+        <motion.div
+          animate={{ 
+            scale: [1, 1.1, 1],
+            opacity: [0.5, 1, 0.5]
+          }}
+          transition={{ 
+            duration: 1.5, 
+            repeat: Infinity,
+            ease: 'easeInOut'
+          }}
+          className="flex flex-col items-center gap-4"
+        >
+          <div className="w-16 h-16 rounded-2xl clinical-gradient flex items-center justify-center shadow-lg shadow-primary/20">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full"
+            />
+          </div>
+          <motion.p
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            className="text-on-surface-variant text-sm"
+          >
+            Loading...
+          </motion.p>
+        </motion.div>
       </div>
     )
   }
@@ -44,36 +101,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return null
   }
 
-  const storedUser = getStoredUser()
-  const user = storedUser ? new User(storedUser) : null
+  const sidebarMargin = isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'
 
   return (
-    <div className="min-h-screen bg-surface">
-      <header className="bg-primary text-white p-4">
-        <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold">OmniDoc Admin</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm opacity-80">
-              {user?.getFullName() || ''}
-            </span>
-            <span className="text-xs bg-white/20 px-2 py-1 rounded">
-              {user?.getRole() || ''}
-            </span>
-            <button
-              onClick={() => {
-                clearAuthSession()
-                router.push('/login')
-              }}
-              className="text-sm hover:underline"
-            >
-              Logout
-            </button>
+    <div className="min-h-screen bg-surface dark:bg-slate-900">
+      <AdminSidebar 
+        isOpen={isSidebarOpen} 
+        onClose={() => setIsSidebarOpen(false)}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+      />
+      
+      <AdminNavbar 
+        onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        isSidebarOpen={isSidebarOpen}
+        sidebarCollapsed={isSidebarCollapsed}
+      />
+
+      <AnimatePresence>
+        <motion.main
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className={`
+            pt-16 min-h-screen transition-all duration-300
+            ${isSidebarOpen ? 'lg:ml-0' : sidebarMargin}
+          `}
+        >
+          <div className="p-6 lg:p-8">
+            {children}
           </div>
-        </div>
-      </header>
-      <main className="container mx-auto p-6">
-        {children}
-      </main>
+        </motion.main>
+      </AnimatePresence>
     </div>
   )
 }

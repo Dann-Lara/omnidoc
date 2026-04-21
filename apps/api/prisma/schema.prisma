@@ -38,6 +38,7 @@ model Organization {
   branding           Json               @default("{}")
   settings           Json               @default("{}")
   subscriptionStatus SubscriptionStatus @default(TRIALING)
+  specialtyIds       String[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
@@ -48,6 +49,9 @@ model Organization {
   auditLogs    AuditLog[]
   subscription Subscription?
   invitations  Invitation[]
+  teamInvitations TeamInvitation[]
+  tenantSpecialties TenantSpecialty[]
+  operatorTenants OperatorTenant[]
 
   @@index([slug])
   @@index([subscriptionStatus])
@@ -62,19 +66,30 @@ model User {
   firstName      String
   lastName       String
   specialty      String?
+  userType       String?
+  subtype        String?
+  avatar        String?
   isTenantAdmin  Boolean   @default(false)
   apiKey         String?
   settings       Json      @default("{}")
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  specialtyIds   String[]  @default([])
+  permissions   Json?
+  status        UserStatus @default(ACTIVE)
+  lastLoginAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   organization        Organization  @relation(fields: [organizationId], references: [id])
   role               Role          @relation(fields: [roleId], references: [id])
   doctorAppointments Appointment[] @relation("DoctorAppointments")
+  teamInvitations     TeamInvitation[] @relation("InvitedByUser")
+  tenantAssignments  OperatorTenant[] @relation("OperatorTenants")
 
   @@index([organizationId])
   @@index([supabaseId])
   @@index([email])
+  @@index([userType])
+  @@index([status])
 }
 
 model Role {
@@ -87,6 +102,7 @@ model Role {
 
   organization Organization @relation(fields: [organizationId], references: [id])
   users        User[]
+  teamInvitations TeamInvitation[]
 
   @@unique([organizationId, name])
   @@index([organizationId])
@@ -193,6 +209,12 @@ enum InvitationStatus {
   REVOKED
 }
 
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING_INVITATION
+}
+
 model Invitation {
   id             String           @id @default(uuid())
   token          String           @unique
@@ -202,6 +224,7 @@ model Invitation {
   status         InvitationStatus @default(PENDING)
   expiresAt      DateTime
   createdBy      String
+  tenantIds      String[]        @default([]) // Tenant IDs para OPERATOR
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
@@ -210,4 +233,91 @@ model Invitation {
   @@index([token])
   @@index([email])
   @@index([status])
+}
+
+model TeamInvitation {
+  id             String    @id @default(uuid())
+  organizationId String
+  email          String
+  userType      String
+  subtype       String?
+  specialtyIds  String[]  @default([])
+  permissions   Json?
+  roleId        String
+  invitedBy    String
+  expiresAt    DateTime
+  status       InvitationStatus @default(PENDING)
+  token        String    @unique
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  role         Role        @relation(fields: [roleId], references: [id])
+  invitedByUser User       @relation("InvitedByUser", fields: [invitedBy], references: [id])
+
+  @@index([organizationId])
+  @@index([email])
+  @@index([token])
+  @@index([status])
+}
+
+// ============================================
+// MÓDULO DE ESPECIALIDADES
+// ============================================
+
+model Specialty {
+  id             String    @id @default(cuid())
+  nameEn         String    @unique // "Cardiology"
+  nameEs         String?   // "Cardiología"
+  icon           String?   // Material Symbols key
+  descriptionEs String?   // Descripción en español
+  descriptionEn String?   // Description in English
+  isActive      Boolean   @default(true)
+  configSchema   Json?     // JSON para campos específicos futuros
+  
+  createdAt      DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relaciones
+  tenantSpecialties TenantSpecialty[]
+
+  @@index([isActive])
+}
+
+model TenantSpecialty {
+  id           String    @id @default(cuid())
+  tenantId     String    // Foreign Key a Organization.id
+  specialtyId  String
+  statsVolume Int       @default(0) // Volumen de pacientes para gráfica
+  
+  tenant      Organization @relation(fields: [tenantId], references: [id])
+  specialty   Specialty    @relation(fields: [specialtyId], references: [id])
+
+  @@unique([tenantId, specialtyId])
+  @@index([tenantId])
+  @@index([specialtyId])
+}
+
+model SystemSettings {
+  id        String   @id @default("global")
+  lang      String   @default("es")
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// MÓDULO DE OPERATORS (SaaS)
+// ============================================
+
+model OperatorTenant {
+  id          String   @id @default(uuid())
+  operatorId  String
+  tenantId    String
+  assignedAt  DateTime @default(now())
+
+  operator    User         @relation("OperatorTenants", fields: [operatorId], references: [id])
+  tenant      Organization @relation(fields: [tenantId], references: [id])
+
+  @@unique([operatorId, tenantId])
+  @@index([operatorId])
+  @@index([tenantId])
 }

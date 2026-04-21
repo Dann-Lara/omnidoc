@@ -4,13 +4,14 @@ SaaS multitenant para gestión de consultas médicas con herramientas asistidas 
 
 ## Tech Stack
 
-- **Frontend:** Next.js 15, Tailwind, Framer Motion
+- **Frontend:** Next.js 16.2.2, React 19.2.4, Tailwind CSS v4, Framer Motion
 - **Backend:** NestJS
 - **Database:** PostgreSQL (Supabase)
-- **Auth:** Clerk
-- **Payments:** Stripe
-- **AI:** Vercel AI SDK
-- **Cache:** Redis (Upstash)
+- **Auth:** Supabase Auth (GoTrue) + cookies HttpOnly
+- **ORM:** Prisma 6.7.0
+- **Payments:** Pendiente de implementación
+- **AI Core:** Pendiente de implementación
+- **Cache:** Pendiente de implementación en app runtime
 
 ## Getting Started
 

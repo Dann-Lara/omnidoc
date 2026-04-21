@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { UserRole } from '@/lib/auth'
+import { motion, AnimatePresence } from 'framer-motion'
+import { createUser, isAuthenticated, getStoredUser, getStoredOrgSlug } from '@/lib/auth'
+import { TenantSidebar } from './dashboard/components/TenantSidebar'
+import { TenantNavbar } from './dashboard/components/TenantNavbar'
 
 export default function TenantLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -10,58 +13,90 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
   const slug = params.slug as string
   const [isAuthorized, setIsAuthorized] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [userInfo, setUserInfo] = useState<{ name: string; role: string } | null>(null)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
+
+  const storedUser = getStoredUser()
+  const storedOrgSlug = getStoredOrgSlug()
+  const orgName = storedOrgSlug || slug
 
   useEffect(() => {
-    const checkAuth = () => {
-      const userStr = localStorage.getItem('sb-user')
-      if (!userStr) {
-        router.push(`/login?redirect=/${slug}`)
-        return
-      }
-
-      try {
-        const user = JSON.parse(userStr)
-        const role = user.role || 'CLIENT'
-        const orgSlug = user.org_slug || ''
-
-        if (role === UserRole.SUPERADMIN || role === UserRole.OPERATOR) {
-          router.push('/admin')
-          return
-        }
-
-        if (orgSlug && orgSlug !== slug) {
-          router.push(`/${orgSlug}`)
-          return
-        }
-
-        const firstName = user.first_name || ''
-        const lastName = user.last_name || ''
-        const fullName = `${firstName} ${lastName}`.trim() || user.email || 'User'
-
-        setUserInfo({ name: fullName, role })
-        setIsAuthorized(true)
-      } catch {
-        router.push('/login')
-      } finally {
-        setIsLoading(false)
-      }
+    if (!isAuthenticated()) {
+      router.push(`/login?redirect=/${slug}`)
+      return
     }
 
-    checkAuth()
+    const userData = getStoredUser()
+    if (!userData) {
+      router.push('/login')
+      return
+    }
+
+    const orgSlug = getStoredOrgSlug()
+    const user = createUser(userData)
+
+    if (user.isSaaSUser()) {
+      router.push('/admin')
+      return
+    }
+
+    if (orgSlug && orgSlug !== slug) {
+      router.push(`/${orgSlug}/dashboard`)
+      return
+    }
+
+    setIsAuthorized(true)
+    setIsLoading(false)
   }, [router, slug])
 
-  const handleLogout = () => {
-    localStorage.removeItem('sb-access-token')
-    localStorage.removeItem('sb-refresh-token')
-    localStorage.removeItem('sb-user')
-    router.push('/login')
-  }
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsSidebarOpen(false)
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', String(isSidebarCollapsed))
+  }, [isSidebarCollapsed])
+
+  useEffect(() => {
+    localStorage.setItem('sidebar-open', String(isSidebarOpen))
+  }, [isSidebarOpen])
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
-        <div className="text-primary">Loading...</div>
+        <motion.div
+          animate={{ 
+            scale: [1, 1.1, 1],
+            opacity: [0.5, 1, 0.5]
+          }}
+          transition={{ 
+            duration: 1.5, 
+            repeat: Infinity,
+            ease: 'easeInOut'
+          }}
+          className="flex flex-col items-center gap-4"
+        >
+          <div className="w-16 h-16 rounded-2xl clinical-gradient flex items-center justify-center shadow-lg shadow-primary/20">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full"
+            />
+          </div>
+          <motion.p
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            className="text-on-surface-variant text-sm"
+          >
+            Loading...
+          </motion.p>
+        </motion.div>
       </div>
     )
   }
@@ -70,30 +105,41 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
     return null
   }
 
+  const sidebarMargin = isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+
   return (
     <div className="min-h-screen bg-surface">
-      <header className="bg-primary text-white p-4">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold">{slug}</h1>
-            <span className="text-sm opacity-80">/ {userInfo?.name}</span>
+      <TenantSidebar 
+        isOpen={isSidebarOpen} 
+        onClose={() => setIsSidebarOpen(false)}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        orgName={orgName}
+        slug={slug}
+      />
+      
+      <TenantNavbar 
+        onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        isSidebarOpen={isSidebarOpen}
+        sidebarCollapsed={isSidebarCollapsed}
+        orgName={orgName}
+      />
+
+      <AnimatePresence>
+        <motion.main
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className={`
+            pt-16 min-h-screen transition-all duration-300
+            ${isSidebarOpen ? 'lg:ml-0' : sidebarMargin}
+          `}
+        >
+          <div className="p-6 lg:p-8">
+            {children}
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-xs bg-white/20 px-2 py-1 rounded">
-              {userInfo?.role}
-            </span>
-            <button
-              onClick={handleLogout}
-              className="text-sm hover:underline"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
-      <main className="container mx-auto p-6">
-        {children}
-      </main>
+        </motion.main>
+      </AnimatePresence>
     </div>
   )
 }

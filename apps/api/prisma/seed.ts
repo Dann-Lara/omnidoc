@@ -45,6 +45,44 @@ async function createSuperadminInSupabase() {
 async function main() {
   console.log('🌱 Seeding database...');
 
+  // Seed specialties
+  const specialtiesData = [
+    { nameEn: 'Dentistry', nameEs: 'Odontología', icon: 'dentistry', descriptionEn: 'Dental and oral health', descriptionEs: 'Salud dental y oral' },
+    { nameEn: 'Nephrology', nameEs: 'Nefrología', icon: 'nephrology', descriptionEn: 'Kidney diseases', descriptionEs: 'Enfermedades renales' },
+    { nameEn: 'Pediatrics', nameEs: 'Pediatría', icon: 'pediatrics', descriptionEn: 'Child healthcare', descriptionEs: 'Atención infantil' },
+    { nameEn: 'Psychology', nameEs: 'Psicología', icon: 'psychology', descriptionEn: 'Mental health', descriptionEs: 'Salud mental' },
+    { nameEn: 'Gynecology', nameEs: 'Ginecología', icon: 'gynecology', descriptionEn: 'Women health', descriptionEs: 'Salud de la mujer' },
+    { nameEn: 'Dermatology', nameEs: 'Dermatología', icon: 'dermatology', descriptionEn: 'Skin health', descriptionEs: 'Salud de la piel' },
+    { nameEn: 'Cardiology', nameEs: 'Cardiología', icon: 'cardiology', descriptionEn: 'Heart health', descriptionEs: 'Salud cardíaca' },
+    { nameEn: 'Ophthalmology', nameEs: 'Oftalmología', icon: 'ophthalmology', descriptionEn: 'Eye health', descriptionEs: 'Salud ocular' },
+    { nameEn: 'Endocrinology', nameEs: 'Endocrinología', icon: 'endocrinology', descriptionEn: 'Hormonal health', descriptionEs: 'Salud hormonal' },
+    { nameEn: 'Nutrition', nameEs: 'Nutrición', icon: 'nutrition', descriptionEn: 'Diet and nutrition', descriptionEs: 'Dieta y nutrición' },
+    { nameEn: 'Orthopedics', nameEs: 'Traumatología', icon: 'orthopedics', descriptionEn: 'Bone and joint', descriptionEs: 'Huesos y articulaciones' },
+    { nameEn: 'Gastroenterology', nameEs: 'Gastroenterología', icon: 'gastroenterology', descriptionEn: 'Digestive health', descriptionEs: 'Salud digestiva' },
+    { nameEn: 'Oncology', nameEs: 'Oncología', icon: 'oncology', descriptionEn: 'Cancer treatment', descriptionEs: 'Tratamiento de cáncer' },
+    { nameEn: 'Otolaryngology', nameEs: 'Otorrinolaringología', icon: 'otolaryngology', descriptionEn: 'Ear, nose, throat', descriptionEs: 'Oído, nariz, garganta' },
+    { nameEn: 'Urology', nameEs: 'Urología', icon: 'urology', descriptionEn: 'Urinary health', descriptionEs: 'Salud urinaria' },
+  ];
+
+  for (const spec of specialtiesData) {
+    const existing = await prisma.specialty.findFirst({
+      where: { nameEn: spec.nameEn }
+    });
+    if (!existing) {
+      await prisma.specialty.create({
+        data: {
+          nameEn: spec.nameEn,
+          nameEs: spec.nameEs,
+          icon: spec.icon,
+          descriptionEn: spec.descriptionEn,
+          descriptionEs: spec.descriptionEs,
+          isActive: true,
+        }
+      });
+    }
+  }
+  console.log('✅ Specialties seeded:', specialtiesData.length);
+
   const freePlan = await prisma.plan.upsert({
     where: { stripePriceId: 'price_free' },
     update: {},
@@ -186,7 +224,7 @@ async function main() {
         email: 'superadmin@omnidoc.dev',
         firstName: 'Super',
         lastName: 'Admin',
-        isTenantAdmin: true,
+        userType: 'OWNER',
       },
     });
     console.log('✅ Superadmin user created in database');

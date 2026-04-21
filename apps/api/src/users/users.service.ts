@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { t } from '@/i18n/translations';
 
 @Injectable()
 export class UsersService {
@@ -15,7 +16,7 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(t('errors.user.notFound', 'es'));
     }
 
     return user;
@@ -46,11 +47,12 @@ export class UsersService {
 
     return {
       userId: user.id,
-      role: user.role.name,
-      permissions: user.role.permissions,
+      role: user.userType,
+      permissions: user.role?.permissions || [],
       organizationId: user.organizationId,
       organizationSlug: user.organization.slug,
-      isTenantAdmin: user.isTenantAdmin,
+      userType: user.userType,
+      subtype: user.subtype,
     };
   }
 }
