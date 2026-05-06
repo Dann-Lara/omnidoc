@@ -348,14 +348,14 @@ export default function UserTypesPage() {
                           <div className="w-10 h-10 rounded-lg bg-primary-fixed flex items-center justify-center">
                             <IconComponent className="w-5 h-5 text-on-primary-fixed-variant" />
                           </div>
-                          <div>
-                            <p className="font-bold text-on-surface">
-                              {lang === 'es' ? config.nameEs || config.name : config.nameEn || config.name}
-                            </p>
-                            <p className="text-xs text-on-surface-variant">
-                              {lang === 'es' ? config.descriptionEs || config.description : config.descriptionEn || config.description}
-                            </p>
-                          </div>
+                            <div>
+                             <p className="font-bold text-on-surface">
+                               {config.name}
+                             </p>
+                             <p className="text-xs text-on-surface-variant">
+                               {config.description}
+                             </p>
+                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-5 text-center">
@@ -540,8 +540,8 @@ export default function UserTypesPage() {
                       className="grid grid-cols-4 items-center bg-surface-container-low rounded-lg p-2"
                     >
                       <div className="text-xs font-bold text-on-surface pl-2">
-                        {lang === 'es' ? module.labelEs || module.label : module.labelEn || module.label}
-                      </div>
+                         {module.label}
+                       </div>
                       <div className="flex justify-center">
                         <input
                           type="checkbox"

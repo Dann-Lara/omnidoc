@@ -122,17 +122,39 @@ export class TeamService {
         },
       }),
       this.prisma.user.count({ where }),
-    ]);
+    ])
+
+    const allSpecialtyIds = [...new Set(members.flatMap(m => m.specialtyIds))]
+    const specialties = allSpecialtyIds.length > 0
+      ? await this.prisma.specialty.findMany({
+          where: { id: { in: allSpecialtyIds } },
+          select: { id: true, nameEn: true, nameEs: true },
+        })
+      : []
+    const specialtyMap = new Map(specialties.map(s => [s.id, s]))
+
+    const membersWithSpecialties = members.map(m => ({
+      ...m,
+      specialties: m.specialtyIds
+        .map(id => specialtyMap.get(id))
+        .filter((s): s is NonNullable<typeof s> => Boolean(s))
+        .map(s => ({
+          specialtyId: s.id,
+          specialty: {
+            name: s.nameEs || s.nameEn,
+          },
+        })),
+    }))
 
     return {
-      data: members,
+      data: membersWithSpecialties,
       meta: {
         page,
         limit,
         total,
         totalPages: Math.ceil(total / limit),
       },
-    };
+    }
   }
 
   async getTeamMember(userId: string, organizationId: string) {

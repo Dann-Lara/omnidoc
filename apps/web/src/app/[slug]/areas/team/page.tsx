@@ -79,7 +79,7 @@ const AVAILABLE_ICONS: Record<string, any> = {
 }
 
 export default function TeamPage() {
-  const { lang, t } = useI18n()
+  const { t } = useI18n()
   const params = useParams()
   const router = useRouter()
   
@@ -210,9 +210,7 @@ export default function TeamPage() {
             {t('common.teamLabel')}
           </h1>
           <p className="text-on-surface-variant mt-1 text-sm">
-            {lang === 'es' 
-              ? 'Gestiona los profesionales y personal administrativo del centro.' 
-              : 'Manage professionals and administrative staff.'}
+            {t('team.description')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -261,9 +259,9 @@ export default function TeamPage() {
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="">{t('common.status')}</option>
-<option value="ACTIVE">{STATUS_LABELS.ACTIVE[lang === 'es' ? 'name' : 'nameEn']}</option>
-              <option value="INACTIVE">{STATUS_LABELS.INACTIVE[lang === 'es' ? 'name' : 'nameEn']}</option>
-              <option value="PENDING_INVITATION">{STATUS_LABELS.PENDING_INVITATION[lang === 'es' ? 'name' : 'nameEn']}</option>
+            <option value="ACTIVE">{t('team.statusLabels.active')}</option>
+              <option value="INACTIVE">{t('team.statusLabels.inactive')}</option>
+              <option value="PENDING_INVITATION">{t('team.statusLabels.pendingInvitation')}</option>
           </select>
         </div>
       </section>
@@ -303,11 +301,11 @@ export default function TeamPage() {
                         ? 'bg-error-container text-on-error-container'
                         : 'bg-surface-container-highest text-on-surface-variant'
                   }`}>
-                    {STATUS_LABELS[member.status]?.[lang === 'es' ? 'name' : 'nameEn']}
+                    {member.status === 'ACTIVE' ? t('team.statusLabels.active') : member.status === 'INACTIVE' ? t('team.statusLabels.inactive') : t('team.statusLabels.pendingInvitation')}
                   </span>
                   {(member.specialtyIds?.length || 0) > 0 && (
                     <span className="text-[11px] text-outline">
-                      {member.specialtyIds?.length} {t('team.specialtiesCount')?.replace('{count}', String(member.specialtyIds?.length || 0)) || (lang === 'es' ? 'especialidades' : 'specialties')}
+                      {member.specialtyIds?.length} {t('team.specialtiesCount')}
                     </span>
                   )}
                 </div>

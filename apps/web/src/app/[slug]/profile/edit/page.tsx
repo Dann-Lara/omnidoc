@@ -56,7 +56,7 @@ export default function TenantProfileEditPage() {
   const params = useParams()
   const router = useRouter()
   const slug = params.slug as string
-  const { lang } = useI18n()
+  const { lang, t } = useI18n()
   const { user, updateUser } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null)
 

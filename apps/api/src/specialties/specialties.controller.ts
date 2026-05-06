@@ -161,7 +161,7 @@ export class SpecialtiesController {
       });
       return specialties.map(s => ({
         ...s,
-        statsVolume: 0,
+        appointmentCount: 0,
         assignedAt: null,
       }));
     }
@@ -180,7 +180,7 @@ export class SpecialtiesController {
       });
       return specialties.map(s => ({
         ...s,
-        statsVolume: 0,
+        appointmentCount: 0,
         assignedAt: null,
       }));
     }
@@ -196,7 +196,7 @@ export class SpecialtiesController {
       });
       return specialties.map(s => ({
         ...s,
-        statsVolume: 0,
+        appointmentCount: 0,
         assignedAt: null,
       }));
     }
@@ -222,10 +222,22 @@ export class SpecialtiesController {
       }
     });
     
+    const counts = await this.prisma.appointment.groupBy({
+      by: ['specialtyId'],
+      where: {
+        organizationId: user.organizationId,
+        specialtyId: { in: assignedIds },
+      },
+      _count: { specialtyId: true },
+    })
+    
+    const countMap = new Map(
+      counts.map(c => [c.specialtyId!, c._count.specialtyId])
+    )
+    
     return specialties.map(s => ({
       ...s,
-      statsVolume: Math.floor(Math.random() * 1000),
-      assignedAt: new Date().toISOString(),
+      appointmentCount: countMap.get(s.id) || 0,
     }));
   }
 
@@ -234,6 +246,60 @@ export class SpecialtiesController {
   @ApiResponse({ status: 201, description: 'Specialty assigned' })
   assignSpecialty(@Body() body: { specialtyId: string }) {
     return { message: 'Specialty assigned', specialtyId: body.specialtyId };
+  }
+
+  @Get('my-specialties/for-notes')
+  @ApiOperation({ summary: 'Get specialties for notes (filtered by role)' })
+  @ApiResponse({ status: 200, description: 'List of specialties based on user role' })
+  async getSpecialtiesForNotes(@Req() req: any) {
+    const accessToken = req.cookies?.['sb-access-token'];
+    
+    if (!accessToken) {
+      return [];
+    }
+    
+    let supabaseId: string | null = null;
+    try {
+      const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
+      supabaseId = payload.sub || payload.user_id;
+    } catch {
+      return [];
+    }
+    
+    if (!supabaseId) {
+      return [];
+    }
+    
+    const user = await this.prisma.user.findUnique({
+      where: { supabaseId },
+      select: { organizationId: true, userType: true, specialtyIds: true },
+    });
+    
+    if (!user?.organizationId) {
+      return [];
+    }
+    
+    let specialtyIds: string[] = [];
+    
+    if (user.userType === 'COLLABORATOR') {
+      specialtyIds = user.specialtyIds || [];
+    } else {
+      const org = await this.prisma.organization.findUnique({
+        where: { id: user.organizationId },
+        select: { specialtyIds: true },
+      });
+      specialtyIds = org?.specialtyIds || [];
+    }
+    
+    if (specialtyIds.length === 0) {
+      return [];
+    }
+    
+    return this.prisma.specialty.findMany({
+      where: { id: { in: specialtyIds }, isActive: true },
+      select: { id: true, nameEn: true, nameEs: true },
+      orderBy: { nameEn: 'asc' },
+    });
   }
 
   @Put('my-specialties')

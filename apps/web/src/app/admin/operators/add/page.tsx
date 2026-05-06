@@ -25,7 +25,7 @@ interface Tenant {
 
 export default function AddOperatorPage() {
   const router = useRouter()
-  const { lang, t } = useI18n()
+  const { t } = useI18n()
   
   const [step, setStep] = useState(1)
   const [email, setEmail] = useState('')
@@ -56,7 +56,7 @@ export default function AddOperatorPage() {
 
   const handleSubmit = async () => {
     if (!email) {
-      setError(lang === 'es' ? 'El email es requerido' : 'Email is required')
+                      setError(t('admin.operators.emailRequired'))
       return
     }
 
@@ -142,9 +142,7 @@ export default function AddOperatorPage() {
           {t('admin.operators.inviteTitle')}
         </h1>
         <p className="text-on-surface-variant mt-1 text-sm max-w-xl">
-          {lang === 'es'
-            ? 'Asigna un operador al panel SaaS. Selecciona los tenants que podrá gestionar.'
-            : 'Assign an operator to the SaaS dashboard. Select the tenants they can manage.'}
+          {t('admin.operators.inviteDesc')}
         </p>
       </motion.div>
 
@@ -176,9 +174,7 @@ export default function AddOperatorPage() {
 
           <div className="p-6 bg-surface-container-low rounded-xl border-l-4 border-primary">
             <p className="text-xs leading-relaxed text-on-surface-variant">
-              {lang === 'es'
-                ? 'El operador podrá acceder solo a los tenants asignados.'
-                : 'The operator will only be able to access the assigned tenants.'}
+              {t('admin.operators.operatorAccessDesc')}
             </p>
           </div>
         </div>
@@ -192,7 +188,7 @@ export default function AddOperatorPage() {
             >
               <section>
                 <h2 className="text-xl font-bold tracking-tight text-primary mb-6">
-                  {lang === 'es' ? 'Datos del Operador' : 'Operator Data'}
+                  {t('admin.operators.operatorData')}
                 </h2>
                 
                 <div className="space-y-4 max-w-lg">
@@ -219,7 +215,7 @@ export default function AddOperatorPage() {
                 <button
                   onClick={() => {
                     if (!email) {
-                      setError(lang === 'es' ? 'El email es requerido' : 'Email is required')
+      setError(t('admin.operators.emailRequired'))
                       return
                     }
                     setError('')
@@ -227,7 +223,7 @@ export default function AddOperatorPage() {
                   }}
                   className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors"
                 >
-                  {lang === 'es' ? 'Continuar' : 'Continue'}
+                  {t('admin.operators.continue')}
                 </button>
               </div>
             </motion.div>
@@ -302,7 +298,7 @@ export default function AddOperatorPage() {
                   onClick={() => setStep(1)}
                   className="px-6 py-2.5 text-on-surface-variant hover:text-primary font-medium transition-colors"
                 >
-                  {lang === 'es' ? 'Atrás' : 'Back'}
+                  {t('admin.operators.back')}
                 </button>
                 <button
                   onClick={handleSubmit}

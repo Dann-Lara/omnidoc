@@ -14,7 +14,8 @@ import {
   Activity,
   BarChart3,
   User,
-  Folder
+  Folder,
+  UserCog
 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { getStoredUser, clearAuthSession } from '@/lib/auth'
@@ -51,6 +52,11 @@ export function TenantSidebar({ isOpen, onClose, isCollapsed: externalCollapsed,
   const areasItems = [
     { href: `${basePath}/areas/specialties`, icon: Folder, labelKey: 'tenant.nav.specialties' },
     ...(userRole === 'OWNER' ? [{ href: `${basePath}/areas/team`, icon: Users, labelKey: 'tenant.nav.team' }] : []),
+  ]
+
+  const operacionesItems = [
+    { href: `${basePath}/operations/patients`, icon: UserCog, labelKey: 'tenant.nav.patients' },
+    { href: `${basePath}/operations/appointments`, icon: Calendar, labelKey: 'nav.appointments' },
   ]
 
   const secondaryNavItems = [
@@ -147,6 +153,41 @@ export function TenantSidebar({ isOpen, onClose, isCollapsed: externalCollapsed,
             {t('tenant.nav.areas')}
           </p>
           {areasItems.map((item) => {
+            const Icon = item.icon
+            const active = isActive(item.href)
+            return (
+              <motion.div
+                key={item.href}
+                whileHover={{ x: 4 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Link
+                  href={item.href}
+                  onClick={onClose}
+                  className={`
+                    flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
+                    ${active 
+                      ? 'bg-surface-container-lowest dark:bg-slate-800 text-primary dark:text-white font-bold border-l-4 border-primary shadow-sm' 
+                      : 'text-on-surface-variant dark:text-slate-400 hover:bg-surface-container dark:hover:bg-slate-800 hover:text-primary dark:hover:text-white'
+                    }
+                    ${isCollapsed ? 'justify-center px-2' : ''}
+                  `}
+                >
+                  <Icon className={`w-5 h-5 shrink-0 ${active ? 'text-primary' : ''}`} />
+                  {!isCollapsed && (
+                    <span className="text-sm truncate">{t(item.labelKey)}</span>
+                  )}
+                </Link>
+              </motion.div>
+            )
+          })}
+        </div>
+
+        <div className="mt-4">
+          <p className={`text-[10px] font-bold uppercase tracking-[0.15em] text-on-surface-variant dark:text-slate-500 mb-3 ${isCollapsed ? 'hidden' : ''}`}>
+            {t('sidebar.operationsLabel')}
+          </p>
+          {operacionesItems.map((item) => {
             const Icon = item.icon
             const active = isActive(item.href)
             return (
