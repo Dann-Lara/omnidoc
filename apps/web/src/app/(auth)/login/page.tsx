@@ -31,6 +31,9 @@ function LoginForm() {
     submit: t('auth.login.submit'),
     signingIn: t('auth.login.signingIn'),
     devPrefill: t('auth.login.devPrefill'),
+    devPrefill2: t('auth.login.devPrefill2'),
+    devPrefill3: t('auth.login.devPrefill3'),
+    devPrefill4: t('auth.login.devPrefill4'),
     devHint: t('auth.login.devHint'),
     noAccount: t('auth.login.noAccount'),
     createOne: t('auth.login.createOne'),
@@ -46,7 +49,7 @@ function LoginForm() {
       setPassword('dev-superadmin-123')
     } else if (type === 'operator') {
       setEmail('operator@omnidoc.dev')
-      setPassword('dev-operator-123')
+      setPassword('Dann92Operator')
     } else if (type === 'tenant') {
       setEmail('dann@opendoc.com')
       setPassword('Dann92Operator')
@@ -236,7 +239,7 @@ function LoginForm() {
           onClick={() => handleDevPrefill('sub')}
           className="w-full mt-2 py-3 px-6 rounded-lg font-semibold border-2 border-dashed border-tertiary text-tertiary hover:bg-tertiary/5 transition-colors flex items-center justify-center gap-2"
         >
-          {labels.devPrefill3}
+          {labels.devPrefill4}
         </button>
         <p className="text-xs text-on-surface-variant mt-2 text-center">
           {labels.devHint}

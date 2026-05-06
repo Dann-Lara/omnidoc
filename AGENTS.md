@@ -83,6 +83,67 @@ Cuando haya instrucción de commit:
 
 ---
 
+## Reglas CRÍTICAS de base de datos y migraciones
+
+⚠️ **ESTAS REGLAS SON ABSOLUTAS. SU VIOLACIÓN CAUSA PÉRDIDA IRREVERSIBLE DE DATOS Y FRUSTRA EL TRABAJO DEL USUARIO.**
+⚠️ **LOS DATOS DE TEST SON VALIOSOS. NUNCA SE ASUME "ES SOLO DESARROLLO".**
+⚠️ **TRATAR LA DB DE DESARROLLO COMO SI FUESE PRODUCCIÓN.**
+
+### Prohibiciones terminantes
+- **NUNCA** ejecutar `prisma migrate reset` (destruye toda la DB).
+- **NUNCA** ejecutar `prisma migrate dev` sin permiso explícito del usuario.
+- **NUNCA** ejecutar `DROP SCHEMA`, `DROP DATABASE`, `DROP TABLE`, ni `TRUNCATE` en ningún contexto.
+- **NUNCA** usar `DELETE FROM` en migraciones.
+- **NUNCA** eliminar datos existentes en migraciones — **PROHIBIDO TERMINANTEMENTE** a menos que el usuario lo diga explícitamente.
+
+### Regla de oro: las migraciones SOLO agregan o modifican, NUNCA eliminan
+- Las migraciones **SOLO** deben: crear tablas, agregar columnas, modificar tipos, agregar índices/relaciones.
+- Las migraciones **NUNCA** deben: eliminar columnas, eliminar tablas, eliminar filas, truncar datos.
+- Si se necesita eliminar algo (columna, tabla, datos): **solo editar el archivo .sql, NO ejecutar**. Avisar al usuario y esperar instrucciones.
+
+### Secuencia obligatoria antes de tocar la DB
+```
+1. ¿Se necesita ejecutar migración o modificar tablas? → SÍ
+2. CREAR BACKUP → pg_dump -h localhost -U postgres omnidoc > backup_$(date +%Y%m%d_%H%M%S).sql
+3. Verificar backup: el archivo existe y tiene contenido (no vacío)
+4. SIN BACKUP → NO EJECUTAR NADA. Detenerse aquí.
+5. ¿La migración elimina datos? → SÍ → DETENERSE, solo editar .sql, avisar al usuario
+6. ¿Confirmación explícita del usuario? → SÍ
+7. Ejecutar migración
+8. Restaurar datos críticos (superadmin, organizaciones, roles) si la migración los afecta
+```
+
+### Reglas de operación con migraciones
+1. **Backup obligatorio SIEMPRE** — Antes de CUALQUIER ejecución de migración (`prisma migrate dev`, `deploy`, o modificación de tablas), crear un dump de seguridad:
+   - `pg_dump -h localhost -U postgres omnidoc > backup_$(date +%Y%m%d_%H%M%S).sql`
+   - Verificar que el archivo se creó y tiene contenido (no vacío).
+   - **Sin backup, NO se ejecuta la migración. Punto.**
+2. **Solo editar archivos** — Cuando el usuario pida modificar migraciones, solo editar los archivos `.sql`. No ejecutarlas.
+3. **Confirmar antes de ejecutar** — Si el usuario quiere aplicar migraciones, pedir confirmación explícita y listar qué datos podrían verse afectados.
+4. **Si una migración falla** — NO intentar resolver con reset. Informar al usuario del error y esperar instrucciones.
+5. **Siempre usar patrones seguros** — Las migraciones deben ser idempotentes:
+   - `CREATE TABLE IF NOT EXISTS`
+   - `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`
+   - `DO $$ BEGIN IF NOT EXISTS ... END IF; END $$;` para columnas nuevas
+   - Nunca `DROP COLUMN` sin backup previo y autorización explícita del usuario
+6. **Proteger datos críticos** — El superadmin es inamovible. Cada migración debe verificar y restaurar:
+   - Organización `omnidoc-saas`
+   - Rol `SUPERADMIN`
+   - Usuario `superadmin@omnidoc.dev`
+
+### Se hace migración y se restauran los datos
+- Después de ejecutar una migración, **siempre** verificar que los datos críticos existen.
+- Si algo se perdió, **restaurar inmediatamente** desde el backup o recrear los datos esenciales (superadmin, orgs, roles).
+- **No hay otra**: migración → verificación → restauración si es necesario.
+
+### Recuperación de errores
+- Si una migración falla parcialmente, **nunca** resetear la DB.
+- Ofrecer al usuario opciones: corregir el SQL manualmente, crear una nueva migración, o esperar instrucciones.
+- Los datos de desarrollo NO son reemplazables — trátalos como producción.
+- Si el usuario indica que "se frustró el test" por pérdida de datos, **es tu responsabilidad** ofrecer restaurar desde el backup o reconstruir los datos críticos inmediatamente.
+
+---
+
 ## Blueprints: cómo decidir
 
 Leer únicamente el blueprint mínimo necesario según el tipo de cambio.

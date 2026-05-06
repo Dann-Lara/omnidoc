@@ -56,7 +56,7 @@ export default function TenantProfileEditPage() {
   const params = useParams()
   const router = useRouter()
   const slug = params.slug as string
-  const { lang } = useI18n()
+  const { lang, t } = useI18n()
   const { user, updateUser } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -136,7 +136,7 @@ export default function TenantProfileEditPage() {
       }
     } catch (err) {
       console.error('Failed to load profile:', err)
-      setError(t('profileEdit.loadError'))
+      setError(t('tenant.profileEdit.loadError'))
     } finally {
       setIsLoading(false)
     }
@@ -146,7 +146,7 @@ export default function TenantProfileEditPage() {
     const file = e.target.files?.[0]
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        alert(t('profileEdit.fileError'))
+        alert(t('tenant.profileEdit.fileError'))
         return
       }
       
@@ -218,7 +218,7 @@ export default function TenantProfileEditPage() {
         setTimeout(() => setShowSuccess(false), 3000)
       }
     } catch (err) {
-      setError(t('profileEdit.saveError'))
+      setError(t('tenant.profileEdit.saveError'))
     } finally {
       setIsSaving(false)
     }
@@ -287,8 +287,8 @@ export default function TenantProfileEditPage() {
             <Save className="w-4 h-4" />
           )}
           {showSuccess 
-? t('common.saved')
-              : t('common.save')
+            ? t('tenant.profileEdit.saved')
+            : t('common.save')
           }
         </motion.button>
       </motion.div>
@@ -308,7 +308,7 @@ export default function TenantProfileEditPage() {
         >
           <Check className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
           <p className="text-sm text-success font-medium">
-            {t('profileEdit.changesSaved')}
+            {t('tenant.profileEdit.changesSaved')}
           </p>
         </motion.div>
       )}
@@ -341,7 +341,7 @@ export default function TenantProfileEditPage() {
           className="md:col-span-2 xl:col-span-2 bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-8 border border-outline-variant dark:border-slate-700"
         >
           <h3 className="text-lg font-bold mb-6">
-            {t('profile.personalInfo')}
+            {t('tenant.profile.personalInfo')}
           </h3>
           
           <div className="flex flex-col md:flex-row gap-8 items-start">
@@ -403,7 +403,7 @@ export default function TenantProfileEditPage() {
 
               <div>
                 <label className="block text-sm font-medium text-on-surface mb-2">
-                  {t('profile.specialties')}
+                  {t('tenant.profile.specialties')}
                 </label>
                 {formData.role === 'COLLABORATOR' ? (
                   specialties && specialties.length > 0 ? (
@@ -419,12 +419,12 @@ export default function TenantProfileEditPage() {
                     </div>
                   ) : (
                     <div className="px-4 py-3 bg-surface-container rounded-lg border border-outline-variant text-on-surface-variant">
-                      {t('profile.noSpecialties')}
+                      {t('tenant.profile.noSpecialties')}
                     </div>
                   )
                 ) : formData.role === 'OWNER' || formData.role === 'SUPERADMIN' ? (
                   <TagSelector
-                    placeholder={t('profile.selectSpecialties')}
+                    placeholder={t('tenant.profile.selectSpecialties')}
                     availableTags={allSpecialties.map(s => ({ id: s.id, name: s.nameEn, nameEs: s.nameEs }))}
                     selectedTags={formData.specialtyIds}
                     onChange={(ids) => setFormData(prev => ({ ...prev, specialtyIds: ids }))}
@@ -443,7 +443,7 @@ export default function TenantProfileEditPage() {
                       className="w-full px-4 py-3 bg-surface-container rounded-lg border border-outline-variant opacity-60 cursor-not-allowed"
                     />
                     <p className="text-xs text-on-surface-variant mt-1">
-                      {t('profile.emailCannotBeChanged')}
+                      {t('tenant.profile.emailCannotBeChanged')}
                     </p>
                   </div>
                 )}
@@ -456,8 +456,8 @@ export default function TenantProfileEditPage() {
         >
           <h3 className="text-lg font-bold mb-6">
             {formData.role === 'OWNER' || formData.role === 'SUPERADMIN'
-              ? t('profile.organizationData')
-              : t('profile.userTypeInfo')}
+              ? t('tenant.profile.organizationData')
+              : t('tenant.profile.userTypeInfo')}
           </h3>
           
           <div className="space-y-6">

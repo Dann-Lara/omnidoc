@@ -15,6 +15,9 @@ import { OperatorsModule } from './admin/operators/operators.module';
 import { AdminInvitationsModule } from './admin/invitations.module';
 import { TeamModule } from './team/team.module';
 import { SettingsModule } from './settings/settings.module';
+import { PatientsModule } from './patients/patients.module';
+import { PatientNotesModule } from './patient-notes/patient-notes.module';
+import { AppointmentsModule } from './appointments/appointments.module';
 
 @Module({
   imports: [
@@ -52,6 +55,10 @@ import { SettingsModule } from './settings/settings.module';
     AdminInvitationsModule,
     TeamModule,
     SettingsModule,
+    PatientsModule,
+    PatientNotesModule,
+    AppointmentsModule,
   ],
+
 })
 export class AppModule {}

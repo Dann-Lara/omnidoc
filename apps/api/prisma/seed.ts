@@ -31,7 +31,7 @@ async function createSuperadminInSupabase() {
     if (error.message.includes('already been registered') || error.message.includes('already exists')) {
       console.log('✅ Superadmin user already exists in Supabase');
       const existingUser = await supabase.auth.admin.listUsers();
-      const superadmin = existingUser.data.users.find(u => u.email === 'superadmin@omnidoc.dev');
+      const superadmin = (existingUser.data as { users: Array<{ id: string; email?: string }> }).users.find(u => u.email === 'superadmin@omnidoc.dev');
       return superadmin?.id || null;
     }
     console.log('⚠️ Failed to create superadmin in Supabase:', error.message);

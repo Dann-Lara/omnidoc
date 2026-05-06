@@ -45,6 +45,13 @@ interface TeamMember {
   }
 }
 
+interface PendingInvitation {
+  id: string
+  email: string
+  token: string
+  expiresAt: string
+}
+
 interface TeamResponse {
   data: TeamMember[]
   meta: {
@@ -79,7 +86,7 @@ const AVAILABLE_ICONS: Record<string, any> = {
 }
 
 export default function TeamPage() {
-  const { lang, t } = useI18n()
+  const { t } = useI18n()
   const params = useParams()
   const router = useRouter()
   
@@ -92,10 +99,13 @@ export default function TeamPage() {
   const [userTypeFilter, setUserTypeFilter] = useState('')
   const [page, setPage] = useState(1)
   const [userTypes, setUserTypes] = useState<Record<string, { name: string; nameEn: string }>>({})
+  const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([])
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   useEffect(() => {
     fetchTeam()
     fetchUserTypes()
+    fetchPendingInvitations()
   }, [page, statusFilter, userTypeFilter])
 
   const fetchTeam = async () => {
@@ -136,6 +146,43 @@ export default function TeamPage() {
       }
     } catch (error) {
       console.error('Failed to fetch user types:', error)
+    }
+  }
+
+  const fetchPendingInvitations = async () => {
+    try {
+      const res = await fetch(`${API_URL}/team/invitations`, {
+        credentials: 'include'
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const pending = (data || []).filter((inv: any) => inv.status === 'PENDING')
+        setPendingInvitations(pending)
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending invitations:', error)
+    }
+  }
+
+  const handleResendInvitation = async (email: string) => {
+    const invitation = pendingInvitations.find(inv => inv.email === email)
+    if (!invitation) return
+
+    setActionLoading(email)
+    try {
+      const res = await fetch(`${API_URL}/team/invite/resend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ invitationId: invitation.id }),
+      })
+      if (res.ok) {
+        await fetchPendingInvitations()
+      }
+    } catch (error) {
+      console.error('Failed to resend invitation:', error)
+    } finally {
+      setActionLoading(null)
     }
   }
 
@@ -210,9 +257,7 @@ export default function TeamPage() {
             {t('common.teamLabel')}
           </h1>
           <p className="text-on-surface-variant mt-1 text-sm">
-            {lang === 'es' 
-              ? 'Gestiona los profesionales y personal administrativo del centro.' 
-              : 'Manage professionals and administrative staff.'}
+            {t('team.description')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -261,9 +306,9 @@ export default function TeamPage() {
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="">{t('common.status')}</option>
-<option value="ACTIVE">{STATUS_LABELS.ACTIVE[lang === 'es' ? 'name' : 'nameEn']}</option>
-              <option value="INACTIVE">{STATUS_LABELS.INACTIVE[lang === 'es' ? 'name' : 'nameEn']}</option>
-              <option value="PENDING_INVITATION">{STATUS_LABELS.PENDING_INVITATION[lang === 'es' ? 'name' : 'nameEn']}</option>
+            <option value="ACTIVE">{t('team.statusLabels.active')}</option>
+              <option value="INACTIVE">{t('team.statusLabels.inactive')}</option>
+              <option value="PENDING_INVITATION">{t('team.statusLabels.pendingInvitation')}</option>
           </select>
         </div>
       </section>
@@ -286,7 +331,13 @@ export default function TeamPage() {
                     </div>
                   )}
                 </div>
-                <div className={`absolute -bottom-1 -right-1 w-5 h-5 border-2 border-white rounded-full ${STATUS_COLORS[member.status]}`}></div>
+                <div className={`absolute -bottom-1 -right-1 w-5 h-5 border-2 border-white rounded-full ${
+                  member.status === 'ACTIVE' 
+                    ? (member.lastLoginAt ? 'bg-emerald-500' : 'bg-amber-500')
+                    : member.status === 'INACTIVE'
+                    ? 'bg-slate-400'
+                    : 'bg-amber-500'
+                }`}></div>
               </div>
                 <div>
                 <h3 className="text-lg font-bold text-on-surface">
@@ -297,27 +348,53 @@ export default function TeamPage() {
                 </p>
                 <div className="flex items-center gap-2 mt-2">
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                    member.status === 'ACTIVE' 
+                    member.status === 'ACTIVE' && member.lastLoginAt
                       ? 'bg-secondary-container text-on-secondary-container' 
                       : member.status === 'INACTIVE'
                         ? 'bg-error-container text-on-error-container'
-                        : 'bg-surface-container-highest text-on-surface-variant'
+                        : 'bg-amber-50 text-amber-700'
                   }`}>
-                    {STATUS_LABELS[member.status]?.[lang === 'es' ? 'name' : 'nameEn']}
+                    {member.status === 'ACTIVE' && member.lastLoginAt
+                      ? t('team.statusLabels.active')
+                      : member.status === 'INACTIVE'
+                      ? t('team.statusLabels.inactive')
+                      : t('team.statusLabels.pendingInvitation')}
                   </span>
                   {(member.specialtyIds?.length || 0) > 0 && (
                     <span className="text-[11px] text-outline">
-                      {member.specialtyIds?.length} {t('team.specialtiesCount')?.replace('{count}', String(member.specialtyIds?.length || 0)) || (lang === 'es' ? 'especialidades' : 'specialties')}
+                      {member.specialtyIds?.length} {t('team.specialtiesCount')}
                     </span>
                   )}
                 </div>
               </div>
             </div>
             <div className="flex flex-col items-end gap-3">
-              <button className="w-10 h-10 rounded-full flex items-center justify-center text-primary-container bg-surface-container-high hover:bg-primary-container hover:text-white transition-colors duration-200">
-                <Mail className="w-5 h-5" />
-              </button>
-              <button className="p-1 text-outline hover:text-on-surface">
+              {(member.status === 'PENDING_INVITATION' || !member.lastLoginAt) && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    handleResendInvitation(member.email)
+                  }}
+                  disabled={actionLoading === member.email}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-primary-container bg-surface-container-high hover:bg-primary-container hover:text-white transition-colors duration-200 disabled:opacity-50"
+                  title={t('team.resendInvitation')}
+                >
+                  {actionLoading === member.email ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Mail className="w-5 h-5" />
+                  )}
+                </button>
+              )}
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  router.push(`/${slug}/areas/team/${member.id}`)
+                }}
+                className="p-1 text-outline hover:text-on-surface"
+              >
                 <MoreHorizontal className="w-5 h-5" />
               </button>
             </div>

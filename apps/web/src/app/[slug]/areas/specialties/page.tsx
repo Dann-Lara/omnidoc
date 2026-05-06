@@ -22,7 +22,7 @@ interface Specialty {
   descriptionEn?: string
   descriptionEs?: string
   isActive: boolean
-  statsVolume?: number
+  appointmentCount?: number
   assignedAt?: string | null
 }
 
@@ -32,52 +32,38 @@ export default function TenantSpecialtiesPage() {
   const slug = params.slug as string
   const [specialties, setSpecialties] = useState<Specialty[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [totalAppointments, setTotalAppointments] = useState(0)
+  const [hasAssigned, setHasAssigned] = useState(false)
 
   useEffect(() => {
-    fetchSpecialties()
+    fetchData()
   }, [])
 
-  const fetchSpecialties = async () => {
+  const fetchData = async () => {
     try {
-      const res = await fetch(`${API_URL}/my-specialties`, {
-        credentials: 'include'
-      })
-      if (res.ok) {
-        const data = await res.json()
-        const assigned = data.filter((s: { assignedAt: string | null }) => s.assignedAt)
-        console.log('[areas/specialties] Assigned:', assigned.map((s: { id: string }) => s.id))
+      const specialtiesRes = await fetch(`${API_URL}/my-specialties`, { credentials: 'include' })
+
+      if (specialtiesRes.ok) {
+        const specialtiesData = await specialtiesRes.json()
+        const assigned = specialtiesData.filter((s: Specialty) => s.assignedAt != null)
+
+        const total = assigned.reduce((sum: number, s: Specialty) => sum + (s.appointmentCount || 0), 0)
+
+        setTotalAppointments(total)
         setSpecialties(assigned)
+        setHasAssigned(assigned.length > 0)
       }
     } catch (error) {
-      console.error('Failed to fetch specialties:', error)
+      console.error('Failed to fetch specialties data:', error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const sortedSpecialties = [...specialties].sort((a, b) => (b.statsVolume || 0) - (a.statsVolume || 0))
-  const count = sortedSpecialties.length
-  const hasRealData = count > 0 && sortedSpecialties.some(s => s.assignedAt)
-
-  const getGridCols = (totalItems: number) => {
-    if (totalItems <= 2) return 'grid-cols-1 sm:grid-cols-2'
-    if (totalItems <= 6) return 'grid-cols-2 sm:grid-cols-3'
-    if (totalItems <= 12) return 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
-    return 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
-  }
-
-  const getBgClass = (index: number) => {
-    if (!hasRealData) return 'bg-surface-container border border-outline-variant/20 hover:bg-surface-container-high'
-    if (index === 0) return 'bg-primary text-white'
-    if (index === 1) return 'bg-secondary-container text-on-secondary-container border border-white/40'
-    if (index === 2) return 'bg-tertiary-container text-on-tertiary-container border border-white/20'
-    if (index >= 3 && index <= 4) return 'bg-surface-container-low border border-outline-variant/20 hover:border-primary'
-    return 'bg-surface-container border border-outline-variant/20 hover:bg-surface-container-high'
-  }
+  const sortedSpecialties = [...specialties].sort((a, b) => (b.appointmentCount || 0) - (a.appointmentCount || 0))
+  const hasRealData = sortedSpecialties.some(s => (s.appointmentCount || 0) > 0)
 
   const getVolumeText = (volume: number) => volume > 0 ? volume.toLocaleString() : '—'
-
-  const totalPatients = count > 0 ? sortedSpecialties.reduce((sum, s) => sum + (s.statsVolume || 0), 0) : 0
 
   return (
     <motion.div
@@ -89,7 +75,7 @@ export default function TenantSpecialtiesPage() {
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6"
+        className="flex justify-between items-end"
       >
         <div>
           <nav className="flex items-center gap-2 text-xs font-bold text-on-surface-variant/60 uppercase tracking-widest mb-3">
@@ -97,19 +83,19 @@ export default function TenantSpecialtiesPage() {
             <span className="material-symbols-outlined text-[12px]">chevron_right</span>
             <span className="text-primary">{t('tenant.areas.specialties.physicianExperience')}</span>
           </nav>
-          <h2 className="text-4xl md:text-5xl font-extrabold text-primary tracking-tight font-headline">
+          <h2 className="text-4xl font-extrabold text-primary tracking-tight font-headline">
             {t('tenant.areas.specialties.specialtyGrid')}
           </h2>
-          <p className="text-on-surface-variant mt-3 max-w-2xl text-lg leading-relaxed">
+          <p className="text-on-surface-variant mt-2 max-w-lg leading-relaxed">
             {t('tenant.areas.specialties.specialtyGridDesc')}
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="px-8 py-3 rounded-xl bg-surface-container-high text-on-surface font-bold text-sm hover:bg-surface-container transition-colors shadow-sm flex items-center gap-2">
+          <button className="px-6 py-2.5 rounded-xl bg-surface-container-high text-on-surface font-semibold text-sm hover:bg-surface-container transition-colors flex items-center gap-2">
             <Download className="w-4 h-4" />
             {t('tenant.areas.specialties.exportMap')}
           </button>
-          <button className="px-8 py-3 rounded-xl bg-gradient-to-br from-primary to-primary-container text-white font-bold text-sm shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all flex items-center gap-2">
+          <button className="px-6 py-2.5 rounded-xl bg-gradient-to-br from-primary to-primary-container text-white font-semibold text-sm shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all flex items-center gap-2">
             <Plus className="w-4 h-4" />
             {t('tenant.areas.specialties.adjustCapacity')}
           </button>
@@ -120,126 +106,228 @@ export default function TenantSpecialtiesPage() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      ) : (
-        <div className={`grid ${getGridCols(count)} gap-4`}>
-          {sortedSpecialties.map((specialty, index) => (
-            <Link
-              key={specialty.id}
-              href={`/${slug}/specialties/${specialty.id}`}
-              className={`${getBgClass(index)} rounded-2xl p-6 relative group overflow-hidden transition-all min-h-[200px] flex flex-col justify-between cursor-pointer hover:shadow-xl hover:scale-[1.02] transition-transform`}
-              style={{ opacity: 1, textDecoration: 'none' }}
-            >
-              <div>
-                <span className="material-symbols-outlined text-2xl mb-4 block" style={{ fontVariationSettings: 'FILL 1' }}>
-                  {specialty.icon || 'medical_services'}
-                </span>
-                <h3 className="text-[clamp(1rem,4vw,1.5rem)] font-bold tracking-tight">
-                  {lang === 'en' ? specialty.nameEn : (specialty.nameEs || specialty.nameEn)}
-                </h3>
-                {!hasRealData && (
-                  <p className="text-on-surface-variant mt-2 text-sm font-medium">
-                    {t('tenant.areas.specialties.noActivePatientsYet')}
-                  </p>
-                )}
-                {hasRealData && index === 0 && (
-                  <p className="text-blue-100/70 mt-2 text-lg font-medium">
-                    {t('tenant.areas.specialties.criticalCareDiagnostics')}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <span className="text-[clamp(1.5rem,5vw,2.5rem)] font-black block">
-                  {getVolumeText(specialty.statsVolume || 0)}
-                </span>
-                <span className="text-xs uppercase tracking-widest text-on-surface-variant">
-                  {t('tenant.areas.specialties.activePatients')}
-                </span>
-              </div>
-            </Link>
-          ))}
+      ) : !hasAssigned ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <span className="material-symbols-outlined text-6xl text-outline-variant mb-4">medical_services</span>
+          <h3 className="text-xl font-bold text-on-surface">{t('tenant.areas.specialties.noSpecialties')}</h3>
+          <p className="text-on-surface-variant mt-2 max-w-md">{t('tenant.areas.specialties.noSpecialtiesDesc')}</p>
         </div>
+      ) : (
+        <section className="grid grid-cols-12 grid-rows-6 gap-5 h-[600px]">
+          {sortedSpecialties.map((specialty, index) => {
+            const volume = specialty.appointmentCount || 0
+            const name = lang === 'en' ? specialty.nameEn : (specialty.nameEs || specialty.nameEn)
+
+            if (index === 0 && hasRealData) {
+              return (
+                <Link
+                  key={specialty.id}
+                  href={`/${slug}/specialties/${specialty.id}`}
+                  className="col-span-6 row-span-4 bg-primary text-white rounded-xl p-8 relative overflow-hidden group hover:scale-[1.01] transition-transform"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl group-hover:bg-white/10 transition-colors duration-500" />
+                  <div className="relative z-10 h-full flex flex-col justify-between">
+                    <div>
+                      <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center mb-6">
+                        <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                          {specialty.icon || 'medical_services'}
+                        </span>
+                      </div>
+                      <h3 className="text-3xl font-bold tracking-tight">{name}</h3>
+                      <p className="text-blue-100/70 mt-2 font-medium">{t('tenant.areas.specialties.criticalCareDiagnostics')}</p>
+                    </div>
+                    <div className="flex items-end justify-between">
+                      <div className="space-y-1">
+                        <span className="block text-4xl font-black">{getVolumeText(volume)}</span>
+                        <span className="text-xs uppercase tracking-widest text-blue-200/80">{t('tenant.areas.specialties.activePatients')}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="inline-flex items-center gap-1 text-emerald-400 text-sm font-bold">
+                          <span className="material-symbols-outlined text-sm">trending_up</span> Active
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              )
+            }
+
+            if (index === 1) {
+              return (
+                <Link
+                  key={specialty.id}
+                  href={`/${slug}/specialties/${specialty.id}`}
+                  className="col-span-3 row-span-3 bg-secondary-container text-on-secondary-container rounded-xl p-6 relative overflow-hidden group border border-white/40 hover:scale-[1.02] transition-transform"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <div className="relative z-10 h-full flex flex-col justify-between">
+                    <div>
+                      <span className="material-symbols-outlined text-2xl mb-4 block" style={{ fontVariationSettings: "'FILL' 1" }}>
+                        {specialty.icon || 'medical_services'}
+                      </span>
+                      <h3 className="text-xl font-bold tracking-tight">{name}</h3>
+                      <p className="text-on-secondary-container/60 text-sm">{t('tenant.areas.specialties.standardOutpatient')}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-2xl font-black">{getVolumeText(volume)}</span>
+                      <div className="w-full bg-on-secondary-container/10 h-1.5 rounded-full overflow-hidden">
+                        <div className="bg-primary h-full" style={{ width: `${Math.min((volume / (sortedSpecialties[0]?.appointmentCount || 1)) * 100, 100)}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              )
+            }
+
+            if (index === 2) {
+              return (
+                <Link
+                  key={specialty.id}
+                  href={`/${slug}/specialties/${specialty.id}`}
+                  className="col-span-3 row-span-3 bg-tertiary-container text-on-tertiary-container rounded-xl p-6 relative overflow-hidden group border border-white/20 hover:scale-[1.02] transition-transform"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <div className="relative z-10 h-full flex flex-col justify-between">
+                    <div>
+                      <span className="material-symbols-outlined text-2xl mb-4 block" style={{ fontVariationSettings: "'FILL' 1" }}>
+                        {specialty.icon || 'medical_services'}
+                      </span>
+                      <h3 className="text-xl font-bold tracking-tight">{name}</h3>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-2xl font-black">{getVolumeText(volume)}</span>
+                      <span className="text-xs uppercase tracking-widest opacity-60">{t('tenant.areas.specialties.specializedLabWork')}</span>
+                    </div>
+                  </div>
+                </Link>
+              )
+            }
+
+            if (index >= 3 && index <= 4) {
+              return (
+                <Link
+                  key={specialty.id}
+                  href={`/${slug}/specialties/${specialty.id}`}
+                  className="col-span-3 row-span-3 bg-surface-container-low rounded-xl p-6 border border-outline-variant/20 hover:border-primary transition-colors hover:scale-[1.02] transition-transform"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <div className="h-full flex flex-col justify-between">
+                    <div>
+                      <span className="material-symbols-outlined text-2xl text-primary mb-4 block" style={{ fontVariationSettings: "'FILL' 1" }}>
+                        {specialty.icon || 'medical_services'}
+                      </span>
+                      <h3 className="text-xl font-bold text-on-surface">{name}</h3>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-2xl font-black text-on-surface">{getVolumeText(volume)}</span>
+                      <span className="text-xs text-on-surface-variant font-medium">{t('tenant.areas.specialties.activePatients')}</span>
+                    </div>
+                  </div>
+                </Link>
+              )
+            }
+
+            return (
+              <Link
+                key={specialty.id}
+                href={`/${slug}/specialties/${specialty.id}`}
+                className="col-span-2 row-span-2 bg-surface-container rounded-xl p-4 border border-outline-variant/20 hover:bg-surface-container-high transition-colors hover:scale-[1.02] transition-transform"
+                style={{ textDecoration: 'none' }}
+              >
+                <div className="flex flex-col h-full justify-between">
+                  <div className="flex justify-between">
+                    <span className="material-symbols-outlined text-primary/60" style={{ fontVariationSettings: "'FILL' 1" }}>
+                      {specialty.icon || 'medical_services'}
+                    </span>
+                    <span className="text-xs font-bold text-primary/40">#{index + 1}</span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-on-surface">{name}</h4>
+                    <p className="text-lg font-black text-on-surface">{getVolumeText(volume)}</p>
+                  </div>
+                </div>
+              </Link>
+            )
+          })}
+
+          {!hasRealData && sortedSpecialties.length === 0 && (
+            <div className="col-span-12 row-span-4 flex items-center justify-center">
+              <div className="text-center space-y-4">
+                <span className="material-symbols-outlined text-6xl text-on-surface-variant/30" style={{ fontVariationSettings: "'FILL' 1" }}>medical_services</span>
+                <p className="text-on-surface-variant font-medium">{t('tenant.areas.specialties.noActivePatientsYet')}</p>
+              </div>
+            </div>
+          )}
+        </section>
       )}
 
-      <section className="flex flex-col lg:flex-row gap-8 items-stretch">
-        <div className="flex-1 bg-surface-container-low p-8 rounded-2xl border border-outline-variant/10">
-          <h4 className="text-sm font-bold uppercase tracking-widest text-on-surface-variant/70 mb-8">
+      <section className="flex flex-col lg:flex-row gap-8 items-start">
+        <div className="flex-1 bg-surface-container-low p-8 rounded-xl border border-outline-variant/10">
+          <h4 className="text-sm font-bold uppercase tracking-widest text-on-surface-variant/70 mb-6">
             {t('tenant.areas.specialties.activityInsights')}
           </h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             <div className="space-y-2">
-              <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-                {t('tenant.areas.specialties.avgConsultationTime')}
-              </p>
-              <p className="text-3xl font-black text-primary">24.5 min</p>
-              <div className="flex items-center gap-1 text-error text-xs font-bold">
-                <span className="material-symbols-outlined text-sm">arrow_upward</span> 1.2% Over Median
-              </div>
-            </div>
-            <div className="space-y-3">
-              <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-                {t('tenant.areas.specialties.resourceUtilization')}
-              </p>
-              <p className="text-3xl font-black text-primary">88.4%</p>
-              <div className="w-full h-2 bg-surface-container-high rounded-full">
-                <div className="bg-primary-container h-full rounded-full" style={{ width: '88.4%' }}></div>
+              <p className="text-xs font-medium text-on-surface-variant">{t('tenant.areas.specialties.avgConsultationTime')}</p>
+              <p className="text-2xl font-black text-primary">24.5 min</p>
+              <div className="flex items-center gap-1 text-error text-[10px] font-bold">
+                <span className="material-symbols-outlined text-xs">arrow_upward</span> 1.2% Over Median
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-                {t('tenant.areas.specialties.staffEfficiency')}
-              </p>
-              <p className="text-3xl font-black text-primary">92/100</p>
-              <div className="flex items-center gap-1 text-emerald-600 text-xs font-bold">
+              <p className="text-xs font-medium text-on-surface-variant">{t('tenant.areas.specialties.resourceUtilization')}</p>
+              <p className="text-2xl font-black text-primary">88.4%</p>
+              <div className="w-full h-1 bg-surface-container-high rounded-full">
+                <div className="bg-primary-container h-full w-[88%]"></div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-on-surface-variant">{t('tenant.areas.specialties.staffEfficiency')}</p>
+              <p className="text-2xl font-black text-primary">92/100</p>
+              <div className="flex items-center gap-1 text-emerald-600 text-[10px] font-bold">
                 <CheckCircle className="w-3 h-3" /> {t('tenant.areas.specialties.optimized')}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="w-full lg:w-96 bg-surface-container-lowest p-8 rounded-2xl shadow-sm border border-outline-variant/10">
-          <h4 className="text-sm font-bold uppercase tracking-widest text-on-surface-variant/70 mb-6">
+        <div className="w-full lg:w-80 bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/10">
+          <h4 className="text-sm font-bold uppercase tracking-widest text-on-surface-variant/70 mb-4">
             {t('tenant.areas.specialties.legend')}
           </h4>
-          <ul className="space-y-5">
-            <li className="flex items-center gap-4">
-              <span className="w-4 h-4 bg-primary rounded-md"></span>
-              <span className="text-sm text-on-surface font-semibold">
-                {t('tenant.areas.specialties.criticalHighActivity')}
-              </span>
+          <ul className="space-y-4">
+            <li className="flex items-center gap-3">
+              <span className="w-3 h-3 bg-primary rounded-sm" />
+              <span className="text-sm text-on-surface font-medium">{t('tenant.areas.specialties.criticalHighActivity')}</span>
             </li>
-            <li className="flex items-center gap-4">
-              <span className="w-4 h-4 bg-secondary-container rounded-md border border-white/50"></span>
-              <span className="text-sm text-on-surface font-semibold">
-                {t('tenant.areas.specialties.standardOutpatient')}
-              </span>
+            <li className="flex items-center gap-3">
+              <span className="w-3 h-3 bg-secondary-container rounded-sm" />
+              <span className="text-sm text-on-surface font-medium">{t('tenant.areas.specialties.standardOutpatient')}</span>
             </li>
-            <li className="flex items-center gap-4">
-              <span className="w-4 h-4 bg-tertiary-container rounded-md"></span>
-              <span className="text-sm text-on-surface font-semibold">
-                {t('tenant.areas.specialties.specializedLabWork')}
-              </span>
+            <li className="flex items-center gap-3">
+              <span className="w-3 h-3 bg-tertiary-container rounded-sm" />
+              <span className="text-sm text-on-surface font-medium">{t('tenant.areas.specialties.specializedLabWork')}</span>
             </li>
-            <li className="flex items-center gap-4">
-              <span className="w-4 h-4 bg-surface-container rounded-md border border-outline-variant/30"></span>
-              <span className="text-sm text-on-surface font-semibold">
-                {t('tenant.areas.specialties.emergingMarkets')}
-              </span>
+            <li className="flex items-center gap-3">
+              <span className="w-3 h-3 bg-surface-container rounded-sm border border-outline-variant/30" />
+              <span className="text-sm text-on-surface font-medium">{t('tenant.areas.specialties.emergingMarkets')}</span>
             </li>
           </ul>
         </div>
       </section>
 
-      <div className="fixed bottom-10 right-10 flex items-center bg-white/90 border border-outline-variant/30 rounded-full pl-8 pr-3 py-3 shadow-2xl backdrop-blur-xl group z-50">
-        <div className="mr-8 border-r border-outline-variant/20 pr-8 hidden md:block">
+      <div className="fixed bottom-8 right-8 flex items-center bg-white border border-outline-variant/20 rounded-full pl-6 pr-2 py-2 shadow-xl backdrop-blur-lg group">
+        <div className="mr-6 border-r border-outline-variant/20 pr-6 hidden md:block">
           <span className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest block leading-none mb-1">
             {t('tenant.areas.specialties.globalLoad')}
           </span>
-          <span className="text-base font-black text-primary leading-none">
-            {hasRealData ? `${Math.round((totalPatients / 30000) * 100)}%` : '0%'} Capacity
+          <span className="text-sm font-black text-primary leading-none">
+            {hasRealData ? `${Math.round((totalAppointments / 30000) * 100)}%` : '0%'} Capacity
           </span>
         </div>
-        <button className="bg-primary text-white flex items-center gap-3 px-8 py-3.5 rounded-full font-bold text-sm hover:bg-primary-container transition-all shadow-lg shadow-primary/30">
-          <Plus className="w-5 h-5" />
+        <button className="bg-primary text-white flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm hover:bg-primary-container transition-all">
+          <Plus className="w-4 h-4" />
           <span>{t('tenant.areas.specialties.deploySpecialty')}</span>
         </button>
       </div>

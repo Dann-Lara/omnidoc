@@ -95,6 +95,7 @@ export default function SignupPage() {
   const successLabels = {
     title: t('auth.signup.emailSent'),
     subtitle: t('auth.signup.subtitle'),
+    instruction: t('auth.signup.instruction'),
     emailLabel: t('auth.signup.emailLabel'),
     resend: t('auth.signup.resend'),
     resendLink: t('auth.signup.resendLink'),
