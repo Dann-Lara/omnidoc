@@ -45,6 +45,7 @@ interface Appointment {
     nameEn: string
     nameEs?: string
   }
+  specialtyId?: string
   scheduledAt: string
   status: string
   mode: string

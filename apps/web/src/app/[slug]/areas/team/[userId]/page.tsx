@@ -62,6 +62,8 @@ export default function TeamMemberPage() {
   const [localSpecialtyIds, setLocalSpecialtyIds] = useState<string[]>([]);
   const [userTypes, setUserTypes] = useState<Record<string, { name: string; nameEn: string }>>({});
   const [specialties, setSpecialties] = useState<{ id: string; name: string; nameEn: string }[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<{ id: string; email: string }[]>([]);
+  const [resending, setResending] = useState(false);
 
   const getSidebarState = () => {
     if (typeof window === 'undefined') return { collapsed: true, open: false }
@@ -79,6 +81,7 @@ export default function TeamMemberPage() {
     fetchMember()
     fetchUserTypes()
     fetchSpecialties()
+    fetchPendingInvitations()
   }, [userId])
 
   const fetchMember = async () => {
@@ -129,6 +132,41 @@ export default function TeamMemberPage() {
       }
     } catch (error) {
       console.error('Failed to fetch specialties:', error)
+    }
+  }
+
+  const fetchPendingInvitations = async () => {
+    try {
+      const res = await fetch(`${API_URL}/team/invitations`, { credentials: 'include' })
+      if (res.ok) {
+        const data = await res.json()
+        setPendingInvitations((data || []).filter((inv: any) => inv.status === 'PENDING'))
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending invitations:', error)
+    }
+  }
+
+  const handleResendInvitation = async () => {
+    if (!member) return
+    const invitation = pendingInvitations.find(inv => inv.email === member.email)
+    if (!invitation) return
+
+    setResending(true)
+    try {
+      const res = await fetch(`${API_URL}/team/invite/resend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ invitationId: invitation.id }),
+      })
+      if (res.ok) {
+        alert(t('team.resendSuccess'))
+      }
+    } catch (error) {
+      console.error('Failed to resend invitation:', error)
+    } finally {
+      setResending(false)
     }
   }
 
@@ -227,7 +265,11 @@ export default function TeamMemberPage() {
                 )}
               </div>
               <div className={`absolute bottom-1 right-1 w-6 h-6 border-4 border-white dark:border-slate-800 rounded-full ${
-                member.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400'
+                member.status === 'ACTIVE' && member.lastLoginAt
+                  ? 'bg-emerald-500'
+                  : member.status === 'PENDING_INVITATION' || !member.lastLoginAt
+                  ? 'bg-amber-500'
+                  : 'bg-slate-400'
               }`}></div>
             </div>
             <h1 className="text-2xl font-extrabold tracking-tight text-on-surface mb-1">
@@ -239,15 +281,33 @@ export default function TeamMemberPage() {
                 {userTypes[member.subtype || '']?.[lang === 'es' ? 'name' : 'nameEn'] || member.subtype || member.userType}
               </span>
               <span className={`px-3 py-1 text-xs font-bold uppercase tracking-widest rounded-full ${
-                member.status === 'ACTIVE' 
+                member.status === 'ACTIVE' && member.lastLoginAt
                   ? 'bg-secondary-container dark:bg-slate-600 text-on-secondary-container dark:text-slate-200'
+                  : member.status === 'PENDING_INVITATION' || !member.lastLoginAt
+                  ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
                   : 'bg-error-container dark:bg-red-900/30 text-error-container dark:text-red-400'
               }`}>
-                {member.status === 'ACTIVE' 
-                  ? t('team.active')
-                  : t('team.inactive')}
+                {member.status === 'ACTIVE' && member.lastLoginAt
+                  ? t('team.statusLabels.active')
+                  : member.status === 'PENDING_INVITATION' || !member.lastLoginAt
+                  ? t('team.statusLabels.pendingInvitation')
+                  : t('team.statusLabels.inactive')}
               </span>
             </div>
+            {(member.status === 'PENDING_INVITATION' || !member.lastLoginAt) && (
+              <button
+                onClick={handleResendInvitation}
+                disabled={resending}
+                className="w-full mt-4 bg-gradient-to-br from-primary to-primary-container text-white px-4 py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all disabled:opacity-50"
+              >
+                {resending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Mail className="w-4 h-4" />
+                )}
+                {resending ? t('team.resending') : t('team.resendInvitation')}
+              </button>
+            )}
             <div className="w-full space-y-4 pt-6 border-t border-surface-container dark:border-slate-700 text-left">
               <div>
                 <span className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">
