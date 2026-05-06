@@ -291,7 +291,7 @@ export default function SpecialtyDashboardPage() {
                           </span>
                         )}
                         {canStart ? (
-                          <Link href={`/${slug}/operations/patients/${appointment.patient.id}/notes/new`} className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-primary-container transition-all flex items-center gap-2">
+                          <Link href={`/${slug}/operations/patients/${appointment.patient.id}/notes/new?userId=${appointment.user.id}&specialtyId=${appointment.specialtyId || ''}`} className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-primary-container transition-all flex items-center gap-2">
                             <Play className="w-4 h-4" />
                             {t('tenant.specialties.start')}
                           </Link>

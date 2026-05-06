@@ -7,6 +7,343 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Organization {
+  id                 String             @id @default(uuid())
+  name               String
+  slug               String             @unique
+  type               OrganizationType
+  planId             String?
+  features           Json               @default("{}")
+  branding           Json               @default("{}")
+  settings           Json               @default("{}")
+  subscriptionStatus SubscriptionStatus @default(TRIALING)
+  specialtyIds       String[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  appointments       Appointment[]
+  auditLogs          AuditLog[]
+  invitations        Invitation[]
+  operatorTenants    OperatorTenant[]
+  patients           Patient[]
+  patientAuditLogs   PatientAuditLog[]
+  patientNotes       PatientNote[]
+  roles              Role[]
+  subscription       Subscription?
+  teamInvitations    TeamInvitation[]
+  tenantSpecialties  TenantSpecialty[]
+  users              User[]
+
+  @@index([slug])
+  @@index([subscriptionStatus])
+}
+
+model User {
+  id                String            @id @default(uuid())
+  supabaseId        String            @unique
+  organizationId    String
+  roleId            String
+  email             String
+  firstName         String
+  lastName          String
+  specialty         String?
+  isTenantAdmin     Boolean           @default(false)
+  apiKey            String?
+  settings          Json              @default("{}")
+  specialtyIds      String[]          @default([])
+  permissions       Json?
+  userType          String?
+  status            UserStatus        @default(ACTIVE)
+  lastLoginAt       DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  subtype           String?
+  avatar            String?
+  appointments      Appointment[]     @relation("UserAppointments")
+  tenantAssignments OperatorTenant[]  @relation("OperatorTenants")
+  patientAuditLogs  PatientAuditLog[]
+  patientNotes      PatientNote[]
+  teamInvitations   TeamInvitation[]  @relation("InvitedByUser")
+  organization      Organization      @relation(fields: [organizationId], references: [id])
+  role              Role              @relation(fields: [roleId], references: [id])
+
+  @@index([organizationId])
+  @@index([supabaseId])
+  @@index([email])
+  @@index([userType])
+  @@index([status])
+}
+
+model Role {
+  id              String           @id @default(uuid())
+  organizationId  String
+  name            String
+  permissions     String[]
+  isDefault       Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  organization    Organization     @relation(fields: [organizationId], references: [id])
+  teamInvitations TeamInvitation[]
+  users           User[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model Subscription {
+  id                   String       @id @default(uuid())
+  organizationId       String       @unique
+  stripeSubscriptionId String       @unique
+  stripeCustomerId     String       @unique
+  planId               String
+  status               String
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  features             Json         @default("{}")
+  createdAt            DateTime     @default(now())
+  organization         Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([stripeCustomerId])
+  @@index([status])
+}
+
+model Plan {
+  id            String   @id @default(uuid())
+  name          String
+  stripePriceId String   @unique
+  price         Decimal  @db.Decimal(10, 2)
+  features      Json     @default("{}")
+  limits        Json     @default("{}")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@index([isActive])
+}
+
+model Appointment {
+  id             String            @id @default(uuid())
+  organizationId String
+  patientId      String
+  scheduledAt    DateTime
+  duration       Int
+  status         AppointmentStatus @default(SCHEDULED)
+  type           String
+  notes          String?
+  aiPredictions  Json?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  userId         String
+  specialtyId    String?
+  mode           AppointmentMode?  @default(IN_PERSON)
+  room           String?
+  reason         String?
+  organization   Organization      @relation(fields: [organizationId], references: [id])
+  patient        Patient           @relation(fields: [patientId], references: [id])
+  specialty      Specialty?        @relation(fields: [specialtyId], references: [id])
+  user           User              @relation("UserAppointments", fields: [userId], references: [id])
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([patientId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@index([specialtyId])
+}
+
+model Patient {
+  id               String            @id @default(uuid())
+  organizationId   String
+  firstName        String
+  lastName         String
+  email            String?
+  phone            String?
+  dateOfBirth      DateTime?
+  medicalHistory   Json              @default("{}")
+  createdAt        DateTime          @default(now())
+  documentType     DocumentType?
+  documentId       String?
+  gender           Gender?
+  bloodType        BloodType?
+  emergencyContact String?
+  emergencyPhone   String?
+  allergies        String[]          @default([])
+  isChronic        Boolean           @default(false)
+  updatedAt        DateTime          @default(now()) @updatedAt
+  appointments     Appointment[]
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  auditLogs        PatientAuditLog[]
+  notes            PatientNote[]
+
+  @@unique([organizationId, documentId])
+  @@index([organizationId])
+  @@index([email])
+  @@index([phone])
+  @@index([documentType, documentId])
+}
+
+model AuditLog {
+  id             String       @id @default(uuid())
+  organizationId String
+  userId         String
+  action         String
+  resourceType   String
+  resourceId     String?
+  metadata       Json?
+  ipAddress      String?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model Invitation {
+  id             String           @id @default(uuid())
+  token          String           @unique
+  email          String
+  organizationId String?
+  role           String
+  status         InvitationStatus @default(PENDING)
+  expiresAt      DateTime
+  createdBy      String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  tenantIds      String[]         @default([])
+  organization   Organization?    @relation(fields: [organizationId], references: [id])
+
+  @@index([token])
+  @@index([email])
+  @@index([status])
+}
+
+model TeamInvitation {
+  id             String           @id @default(uuid())
+  organizationId String
+  email          String
+  userType       String
+  specialtyIds   String[]         @default([])
+  permissions    Json?
+  roleId         String
+  invitedBy      String
+  expiresAt      DateTime
+  status         InvitationStatus @default(PENDING)
+  token          String           @unique
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  subtype        String?
+  invitedByUser  User             @relation("InvitedByUser", fields: [invitedBy], references: [id])
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+  role           Role             @relation(fields: [roleId], references: [id])
+
+  @@index([organizationId])
+  @@index([email])
+  @@index([token])
+  @@index([status])
+}
+
+model Specialty {
+  id                String            @id @default(cuid())
+  nameEn            String            @unique
+  nameEs            String?
+  icon              String?
+  descriptionEs     String?
+  descriptionEn     String?
+  isActive          Boolean           @default(true)
+  configSchema      Json?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  appointments      Appointment[]
+  tenantSpecialties TenantSpecialty[]
+
+  @@index([isActive])
+}
+
+model TenantSpecialty {
+  id          String       @id @default(cuid())
+  tenantId    String
+  specialtyId String
+  statsVolume Int          @default(0)
+  specialty   Specialty    @relation(fields: [specialtyId], references: [id])
+  tenant      Organization @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, specialtyId])
+  @@index([tenantId])
+  @@index([specialtyId])
+}
+
+model SystemSettings {
+  id        String   @id
+  lang      String   @default("es")
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+}
+
+model OperatorTenant {
+  id         String       @id @default(dbgenerated("gen_random_uuid()"))
+  operatorId String
+  tenantId   String
+  assignedAt DateTime     @default(now())
+  operator   User         @relation("OperatorTenants", fields: [operatorId], references: [id])
+  tenant     Organization @relation(fields: [tenantId], references: [id])
+
+  @@unique([operatorId, tenantId])
+  @@index([operatorId])
+  @@index([tenantId])
+}
+
+model PatientNote {
+  id             String       @id @default(dbgenerated("gen_random_uuid()"))
+  patientId      String
+  doctorId       String
+  organizationId String
+  specialtyId    String?
+  bloodPressure  String?
+  heartRate      Int?
+  temperature    Decimal?     @db.Decimal(4, 1)
+  respRate       Int?
+  oxygenSat      Int?
+  weight         Decimal?     @db.Decimal(5, 2)
+  height         Decimal?     @db.Decimal(5, 2)
+  bmi            Decimal?     @db.Decimal(4, 2)
+  subjective     String?
+  diagnosis      String?
+  plan           String?
+  isSealed       Boolean      @default(false)
+  sealedAt       DateTime?
+  signature      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  doctor         User         @relation(fields: [doctorId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  patient        Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([organizationId])
+  @@index([isSealed])
+  @@index([createdAt])
+}
+
+model PatientAuditLog {
+  id             String             @id @default(dbgenerated("gen_random_uuid()"))
+  patientId      String
+  userId         String
+  organizationId String
+  action         PatientAuditAction
+  fieldChanged   String?
+  oldValue       Json?
+  newValue       Json?
+  ipAddress      String?
+  createdAt      DateTime           @default(now())
+  organization   Organization       @relation(fields: [organizationId], references: [id])
+  patient        Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  user           User               @relation(fields: [userId], references: [id])
+
+  @@index([patientId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
 enum OrganizationType {
   INDIVIDUAL
   CLINIC
@@ -64,203 +401,6 @@ enum PatientAuditAction {
   PRINTED
 }
 
-model Organization {
-  id                 String             @id @default(uuid())
-  name               String
-  slug               String             @unique
-  type               OrganizationType
-  planId             String?
-  features           Json               @default("{}")
-  branding           Json               @default("{}")
-  settings           Json               @default("{}")
-  subscriptionStatus SubscriptionStatus @default(TRIALING)
-  specialtyIds       String[]
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-
-  users        User[]
-  roles        Role[]
-  appointments Appointment[]
-  patients     Patient[]
-  auditLogs    AuditLog[]
-  subscription Subscription?
-  invitations  Invitation[]
-  teamInvitations TeamInvitation[]
-  tenantSpecialties TenantSpecialty[]
-  operatorTenants OperatorTenant[]
-  patientNotes   PatientNote[]
-  patientAuditLogs PatientAuditLog[]
-
-  @@index([slug])
-  @@index([subscriptionStatus])
-}
-
-model User {
-  id             String    @id @default(uuid())
-  supabaseId     String    @unique
-  organizationId String
-  roleId         String
-  email          String
-  firstName      String
-  lastName       String
-  specialty      String?
-  userType       String?
-  subtype        String?
-  avatar        String?
-  isTenantAdmin  Boolean   @default(false)
-  apiKey         String?
-  settings       Json      @default("{}")
-  specialtyIds   String[]  @default([])
-  permissions   Json?
-  status        UserStatus @default(ACTIVE)
-  lastLoginAt   DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  organization        Organization  @relation(fields: [organizationId], references: [id])
-  role               Role          @relation(fields: [roleId], references: [id])
-  appointments Appointment[] @relation("UserAppointments")
-  teamInvitations     TeamInvitation[] @relation("InvitedByUser")
-  tenantAssignments  OperatorTenant[] @relation("OperatorTenants")
-  patientNotes      PatientNote[]
-  patientAuditLogs PatientAuditLog[]
-
-  @@index([organizationId])
-  @@index([supabaseId])
-  @@index([email])
-  @@index([userType])
-  @@index([status])
-}
-
-model Role {
-  id             String    @id @default(uuid())
-  organizationId String
-  name           String
-  permissions    String[]
-  isDefault      Boolean   @default(false)
-  createdAt      DateTime  @default(now())
-
-  organization Organization @relation(fields: [organizationId], references: [id])
-  users        User[]
-  teamInvitations TeamInvitation[]
-
-  @@unique([organizationId, name])
-  @@index([organizationId])
-}
-
-model Subscription {
-  id                    String    @id @default(uuid())
-  organizationId        String    @unique
-  stripeSubscriptionId  String    @unique
-  stripeCustomerId      String    @unique
-  planId                String
-  status                String
-  currentPeriodStart    DateTime
-  currentPeriodEnd      DateTime
-  features              Json      @default("{}")
-  createdAt             DateTime  @default(now())
-
-  organization Organization @relation(fields: [organizationId], references: [id])
-
-  @@index([stripeCustomerId])
-  @@index([status])
-}
-
-model Plan {
-  id            String    @id @default(uuid())
-  name          String
-  stripePriceId String    @unique
-  price         Decimal   @db.Decimal(10, 2)
-  features      Json      @default("{}")
-  limits        Json      @default("{}")
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-
-  @@index([isActive])
-}
-
-model Appointment {
-  id             String            @id @default(uuid())
-  organizationId String
-  patientId      String
-  userId         String
-  specialtyId    String?
-  scheduledAt    DateTime
-  duration       Int
-  status         AppointmentStatus @default(SCHEDULED)
-  mode           AppointmentMode? @default(IN_PERSON)
-  type           String
-  room           String?
-  reason         String?
-  notes          String?
-  aiPredictions  Json?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-
-  organization Organization     @relation(fields: [organizationId], references: [id])
-  patient      Patient         @relation(fields: [patientId], references: [id])
-  user         User            @relation("UserAppointments", fields: [userId], references: [id])
-  specialty   Specialty?      @relation(fields: [specialtyId], references: [id])
-
-  @@index([organizationId])
-  @@index([userId])
-  @@index([patientId])
-  @@index([scheduledAt])
-  @@index([status])
-  @@index([specialtyId])
-}
-
-model Patient {
-  id              String    @id @default(uuid())
-  organizationId String
-  documentType    DocumentType?
-  documentId      String?
-  firstName       String
-  lastName        String
-  email           String?
-  phone           String?
-  dateOfBirth     DateTime?
-  gender          Gender?
-  bloodType       BloodType?
-  emergencyContact String?
-  emergencyPhone   String?
-  allergies       String[]     @default([])
-  isChronic       Boolean      @default(false)
-  medicalHistory Json          @default("{}")
-  createdAt      DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-
-  organization Organization   @relation(fields: [organizationId], references: [id])
-  appointments Appointment[]
-  notes         PatientNote[]
-  auditLogs     PatientAuditLog[]
-
-  @@unique([organizationId, documentId])
-  @@index([organizationId])
-  @@index([email])
-  @@index([phone])
-  @@index([documentType, documentId])
-}
-
-model AuditLog {
-  id             String    @id @default(uuid())
-  organizationId String
-  userId         String
-  action         String
-  resourceType   String
-  resourceId     String?
-  metadata       Json?
-  ipAddress      String?
-  createdAt      DateTime  @default(now())
-
-  organization Organization @relation(fields: [organizationId], references: [id])
-
-  @@index([organizationId])
-  @@index([userId])
-  @@index([action])
-  @@index([createdAt])
-}
-
 enum InvitationStatus {
   PENDING
   ACCEPTED
@@ -272,176 +412,4 @@ enum UserStatus {
   ACTIVE
   INACTIVE
   PENDING_INVITATION
-}
-
-model Invitation {
-  id             String           @id @default(uuid())
-  token          String           @unique
-  email          String
-  organizationId String?
-  role           String
-  status         InvitationStatus @default(PENDING)
-  expiresAt      DateTime
-  createdBy      String
-  tenantIds      String[]        @default([]) // Tenant IDs para OPERATOR
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-
-  organization Organization? @relation(fields: [organizationId], references: [id])
-
-  @@index([token])
-  @@index([email])
-  @@index([status])
-}
-
-model TeamInvitation {
-  id             String    @id @default(uuid())
-  organizationId String
-  email          String
-  userType      String
-  subtype       String?
-  specialtyIds  String[]  @default([])
-  permissions   Json?
-  roleId        String
-  invitedBy    String
-  expiresAt    DateTime
-  status       InvitationStatus @default(PENDING)
-  token        String    @unique
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id])
-  role         Role        @relation(fields: [roleId], references: [id])
-  invitedByUser User       @relation("InvitedByUser", fields: [invitedBy], references: [id])
-
-  @@index([organizationId])
-  @@index([email])
-  @@index([token])
-  @@index([status])
-}
-
-// ============================================
-// MÓDULO DE ESPECIALIDADES
-// ============================================
-
-model Specialty {
-  id             String    @id @default(cuid())
-  nameEn         String    @unique // "Cardiology"
-  nameEs         String?   // "Cardiología"
-  icon           String?   // Material Symbols key
-  descriptionEs String?   // Descripción en español
-  descriptionEn String?   // Description in English
-  isActive      Boolean   @default(true)
-  configSchema   Json?     // JSON para campos específicos futuros
-  
-  createdAt      DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // Relaciones
-  tenantSpecialties TenantSpecialty[]
-  appointments      Appointment[]
-
-  @@index([isActive])
-}
-
-model TenantSpecialty {
-  id           String    @id @default(cuid())
-  tenantId     String    // Foreign Key a Organization.id
-  specialtyId  String
-  statsVolume Int       @default(0) // Volumen de pacientes para gráfica
-  
-  tenant      Organization @relation(fields: [tenantId], references: [id])
-  specialty   Specialty    @relation(fields: [specialtyId], references: [id])
-
-  @@unique([tenantId, specialtyId])
-  @@index([tenantId])
-  @@index([specialtyId])
-}
-
-model SystemSettings {
-  id        String   @id @default("global")
-  lang      String   @default("es")
-  updatedAt DateTime @updatedAt
-}
-
-// ============================================
-// MÓDULO DE OPERATORS (SaaS)
-// ============================================
-
-model OperatorTenant {
-  id          String   @id @default(uuid())
-  operatorId  String
-  tenantId    String
-  assignedAt  DateTime @default(now())
-
-  operator    User         @relation("OperatorTenants", fields: [operatorId], references: [id])
-  tenant      Organization @relation(fields: [tenantId], references: [id])
-
-  @@unique([operatorId, tenantId])
-  @@index([operatorId])
-  @@index([tenantId])
-}
-
-// ============================================
-// MÓDULO DE PACIENTES
-// ============================================
-
-model PatientNote {
-  id              String      @id @default(uuid())
-  patientId       String
-  doctorId        String
-  organizationId String
-  specialtyId     String?
-
-  bloodPressure  String?
-  heartRate       Int?
-  temperature     Decimal?    @db.Decimal(4, 1)
-  respRate        Int?
-  oxygenSat       Int?
-  weight          Decimal?    @db.Decimal(5, 2)
-  height          Decimal?    @db.Decimal(5, 2)
-  bmi             Decimal?   @db.Decimal(4, 2)
-
-  subjective     String?
-  diagnosis      String?
-  plan            String?
-
-  isSealed       Boolean     @default(false)
-  sealedAt       DateTime?
-  signature      String?
-
-  createdAt       DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  patient       Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  doctor       User         @relation(fields: [doctorId], references: [id])
-  organization Organization @relation(fields: [organizationId], references: [id])
-
-  @@index([patientId])
-  @@index([doctorId])
-  @@index([organizationId])
-  @@index([isSealed])
-  @@index([createdAt])
-}
-
-model PatientAuditLog {
-  id              String    @id @default(uuid())
-  patientId       String
-  userId          String
-  organizationId String
-  action          PatientAuditAction
-  fieldChanged    String?
-  oldValue        Json?
-  newValue        Json?
-  ipAddress       String?
-  createdAt       DateTime @default(now())
-
-  patient       Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  user          User         @relation(fields: [userId], references: [id])
-  organization Organization @relation(fields: [organizationId], references: [id])
-
-  @@index([patientId])
-  @@index([userId])
-  @@index([action])
-  @@index([createdAt])
 }

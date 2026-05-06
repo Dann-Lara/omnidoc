@@ -215,11 +215,8 @@ export class SpecialtiesController {
       this.logger.log(`GET - user is ${user.userType || 'OWNER'}, using org specialtyIds: ${JSON.stringify(assignedIds)}`);
     }
     
-    const specialties = await this.prisma.specialty.findMany({
-      where: { 
-        isActive: true,
-        id: { in: assignedIds }
-      }
+    const allSpecialties = await this.prisma.specialty.findMany({
+      where: { isActive: true },
     });
     
     const counts = await this.prisma.appointment.groupBy({
@@ -235,9 +232,10 @@ export class SpecialtiesController {
       counts.map(c => [c.specialtyId!, c._count.specialtyId])
     )
     
-    return specialties.map(s => ({
+    return allSpecialties.map(s => ({
       ...s,
       appointmentCount: countMap.get(s.id) || 0,
+      assignedAt: assignedIds.includes(s.id) ? new Date().toISOString() : null,
     }));
   }
 

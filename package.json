@@ -4,7 +4,8 @@
   "private": true,
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "rm -rf .turbo && turbo run dev",
+    "dev:no-clean": "turbo run dev",
     "dev:web": "turbo run dev --filter=web",
     "dev:web:force-clean": "turbo run dev:force-clean --filter=web",
     "dev:api": "turbo run dev --filter=api",

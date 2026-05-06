@@ -74,14 +74,14 @@ export default function ProfileSpecialtiesPage() {
       })
 
       if (res.ok) {
-        setMessage(t('profileSpecialties.updated'))
+        setMessage(t('tenant.profileSpecialties.updated'))
         setTimeout(() => {
           router.push(`/${orgSlug || 'profile'}/profile`)
         }, 1500)
       }
     } catch (error) {
       console.error('Failed to save specialties:', error)
-      setMessage(t('profileSpecialties.error'))
+      setMessage(t('tenant.profileSpecialties.error'))
     } finally {
       setIsSaving(false)
     }
@@ -108,7 +108,7 @@ export default function ProfileSpecialtiesPage() {
           </Link>
           <div>
             <h1 className="text-3xl font-bold text-primary">
-              {t('profile.specialties')}
+              {t('tenant.profile.specialties')}
             </h1>
             <p className="text-on-surface-variant">
               {t('tenant.profileSpecialties.manageSubtitle')}
@@ -149,8 +149,8 @@ export default function ProfileSpecialtiesPage() {
       ) : (
         <div className="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant">
           <TagSelector
-            label={t('profileSpecialties.yourSpecialties')}
-            placeholder={t('profile.selectSpecialties')}
+            label={t('tenant.profileSpecialties.yourSpecialties')}
+            placeholder={t('tenant.profileSpecialties.placeholder')}
             availableTags={allSpecialties.map(s => ({ id: s.id, name: s.nameEn, nameEs: s.nameEs }))}
             selectedTags={selectedSpecialties}
             onChange={setSelectedSpecialties}

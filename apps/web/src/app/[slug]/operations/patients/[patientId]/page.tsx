@@ -388,11 +388,9 @@ export default function PatientEditPage() {
                       onChange={(e) => handleChange('gender', e.target.value)}
                       className="w-full bg-surface-container-high dark:bg-slate-800 border-none rounded-lg text-sm font-semibold h-10 px-3 dark:text-white"
                     >
-                      <option value="">{t('patients.detail.select')}</option>
-                      <option value="MALE">{t('patients.detail.male')}</option>
-                      <option value="FEMALE">{t('patients.detail.female')}</option>
-                      <option value="HOMBRE">{t('patients.detail.man')}</option>
-                      <option value="MUJER">{t('patients.detail.woman')}</option>
+                      <option value="">{t('patients.form.select')}</option>
+                      <option value="HOMBRE">{t('patients.form.male')}</option>
+                      <option value="MUJER">{t('patients.form.female')}</option>
                     </select>
                   </div>
                 </div>

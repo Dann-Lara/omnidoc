@@ -49,7 +49,7 @@ function LoginForm() {
       setPassword('dev-superadmin-123')
     } else if (type === 'operator') {
       setEmail('operator@omnidoc.dev')
-      setPassword('dev-operator-123')
+      setPassword('Dann92Operator')
     } else if (type === 'tenant') {
       setEmail('dann@opendoc.com')
       setPassword('Dann92Operator')
