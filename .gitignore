@@ -1,3 +1,18 @@
+# Environment (all patterns)
+.env
+.env.local
+.env.*.local
+.env.staging
+.env.production
+*.env
+
+# Secrets and credentials
+cookies.txt
+*.pem
+*.key
+service-account.json
+*.secret
+
 # Dependencies
 node_modules/
 .pnpm-store/
@@ -6,36 +21,40 @@ node_modules/
 .next/
 dist/
 .turbo/
-
-# Environment files (keep .env.example)
-.env
-.env.local
-.env.staging
-.env.production
-.env.*.local
+out/
 
 # Docker
 *.tar
+*.qcow2
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+*.code-workspace
 
 # OS
 .DS_Store
 Thumbs.db
+Desktop.ini
 
 # Logs
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # Testing
 coverage/
+.nyc_output/
 
 # Misc
 *.tgz
+*.zip
 
-# Agent Skills
-.agents/
+# OS generated
+._*
+.Spotlight-V100
+.Trashes
