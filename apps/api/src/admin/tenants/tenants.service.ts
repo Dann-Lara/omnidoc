@@ -212,7 +212,7 @@ export class TenantsService {
         take: 5,
         include: {
           patient: true,
-          doctor: true,
+          user: true,
         },
       }),
     ]);

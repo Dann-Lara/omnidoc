@@ -160,9 +160,7 @@ export default function AddTeamMemberPage() {
           {t('team.inviteNewMember')}
         </h1>
         <p className="text-on-surface-variant mt-1 text-sm max-w-xl">
-          {lang === 'es'
-            ? 'Provisiona acceso seguro al ecosistema clínico. Completa la asignación de rol y especialidad.'
-            : 'Provision secure access to the clinical ecosystem. Complete the role and specialty alignment.'}
+          {t('team.inviteDesc')}
         </p>
       </motion.div>
 
@@ -205,9 +203,7 @@ export default function AddTeamMemberPage() {
 
           <div className="p-6 bg-surface-container-low rounded-xl border-l-4 border-primary">
             <p className="text-xs leading-relaxed text-on-surface-variant">
-              {lang === 'es'
-                ? 'Los permisos se heredan automáticamente según el tipo de usuario y especialidades asignadas.'
-                : 'Permissions are automatically inherited based on the selected User Type and assigned Specialties.'}
+              {t('team.permissionsInherited')}
             </p>
           </div>
         </div>
@@ -220,9 +216,7 @@ export default function AddTeamMemberPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Object.keys(userTypes).length === 0 ? (
                 <p className="text-on-surface-variant col-span-2 text-center py-8">
-                  {lang === 'es' 
-                    ? 'No hay tipos de usuario configurados. Configúralos primero.' 
-                    : 'No user types configured. Configure them first.'}
+                  {t('team.noUserTypesConfigured')}
                 </p>
               ) : (
                 Object.entries(userTypes).map(([typeKey, config]: [string, any]) => {
@@ -293,7 +287,7 @@ export default function AddTeamMemberPage() {
                       type="text"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      placeholder={lang === 'es' ? 'Ej. Juan' : 'John'}
+                      placeholder={t('team.firstNamePlaceholder')}
                     />
                   </div>
                   <div>
@@ -305,7 +299,7 @@ export default function AddTeamMemberPage() {
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       className="w-full px-4 py-3 bg-surface-container-high border-none rounded-lg text-on-surface text-sm focus:ring-2 focus:ring-primary/20"
-                      placeholder={lang === 'es' ? 'Ej. Pérez' : 'Doe'}
+                      placeholder={t('team.lastNamePlaceholder')}
                     />
                   </div>
                 </div>

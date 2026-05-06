@@ -3,18 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node ./scripts/clean-next-dev-cache.mjs && node --max-old-space-size=8192 ./node_modules/next/dist/bin/next dev",
+    "dev:force-clean": "node ./scripts/clean-next-dev-cache.mjs --force && node --max-old-space-size=8192 ./node_modules/next/dist/bin/next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^4.5.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.7.0",
     "next": "16.2.2",
     "next-themes": "0.2.0",
     "react": "19.2.4",
+    "react-date-range": "^2.0.1",
     "react-dom": "19.2.4",
     "tailwind-merge": "^3.5.0"
   },
@@ -22,6 +25,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
+    "@types/react-date-range": "^1.4.10",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",

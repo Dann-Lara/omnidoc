@@ -361,9 +361,7 @@ export default function TeamMemberPage() {
                 {t('team.systemPermissions')}
               </h2>
               <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-1">
-                {lang === 'es'
-                  ? 'Define el nivel de acceso para este miembro en los módulos clínicos.'
-                  : 'Define the access level for this member in clinical modules.'}
+                {t('team.permissionsDescription')}
               </p>
             </div>
             <div className="px-8 pb-8">
@@ -381,7 +379,7 @@ export default function TeamMemberPage() {
                     {PERMISSIONS.map((perm) => (
                       <tr key={perm.key} className="bg-surface-container-low dark:bg-slate-700 group hover:bg-surface-container dark:hover:bg-slate-600 transition-colors">
                         <td className="py-4 pl-4 font-semibold dark:text-white rounded-l-lg">
-                          {lang === 'es' ? perm.name : perm.nameEn}
+                          {perm.key === 'appointments' ? t('team.permAppointments') : perm.key === 'patients' ? t('team.permPatients') : t('team.permClinicalHistory')}
                         </td>
                         <td className="py-4 text-center">
                           <input
