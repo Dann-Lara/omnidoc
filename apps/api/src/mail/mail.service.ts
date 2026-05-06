@@ -68,7 +68,7 @@ export class MailService {
       }
       
       const result = await this.resend.emails.send({
-        from: this.fromEmail,
+        from: `${organizationName} <${this.fromEmail}>`,
         to: actualRecipient,
         subject,
         html,
@@ -109,7 +109,7 @@ export class MailService {
 
     try {
       const result = await this.resend.emails.send({
-        from: this.fromEmail,
+        from: `OmniDoc <${this.fromEmail}>`,
         to: actualRecipient,
         subject,
         html,
@@ -158,7 +158,7 @@ export class MailService {
       }
 
       const result = await this.resend.emails.send({
-        from: this.fromEmail,
+        from: `${organizationName} <${this.fromEmail}>`,
         to: actualRecipient,
         subject,
         html,
@@ -208,7 +208,7 @@ export class MailService {
       }
 
       const result = await this.resend.emails.send({
-        from: this.fromEmail,
+        from: `${organizationName} <${this.fromEmail}>`,
         to: actualRecipient,
         subject,
         html,

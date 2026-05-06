@@ -307,7 +307,7 @@ export function AgendaView({ appointments, timeView, selectedDate, onDateChange,
                 {t('appointments.agenda.edit')}
               </button>
               <button
-                onClick={() => { router.push(`/${slug}/operations/patients/${appt.patient.id}/notes/new`); setSelectedAppt(null) }}
+                onClick={() => { router.push(`/${slug}/operations/patients/${appt.patient.id}/notes/new?userId=${appt.userId || appt.user.id}&specialtyId=${appt.specialtyId || ''}`); setSelectedAppt(null) }}
                 className="flex-1 px-4 py-2.5 bg-primary/10 text-primary rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-primary/20 transition-colors"
               >
                 <FileText className="w-4 h-4" />

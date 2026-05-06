@@ -160,7 +160,7 @@ export class PatientNotesService {
     patientId: string,
     dto: CreateNoteDto,
 ) {
-    let effectiveUserId = userId || '00000000-0000-0000-0000-000000000001'
+    let effectiveUserId = dto.userId || userId || '00000000-0000-0000-0000-000000000001'
     let effectiveOrgId = organizationId || '00000000-0000-0000-0000-000000000001'
     
     if (!userId || !organizationId) {

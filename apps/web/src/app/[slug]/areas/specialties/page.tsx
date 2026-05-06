@@ -23,6 +23,7 @@ interface Specialty {
   descriptionEs?: string
   isActive: boolean
   appointmentCount?: number
+  assignedAt?: string | null
 }
 
 export default function TenantSpecialtiesPage() {
@@ -32,6 +33,7 @@ export default function TenantSpecialtiesPage() {
   const [specialties, setSpecialties] = useState<Specialty[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [totalAppointments, setTotalAppointments] = useState(0)
+  const [hasAssigned, setHasAssigned] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -43,11 +45,13 @@ export default function TenantSpecialtiesPage() {
 
       if (specialtiesRes.ok) {
         const specialtiesData = await specialtiesRes.json()
+        const assigned = specialtiesData.filter((s: Specialty) => s.assignedAt != null)
 
-        const total = specialtiesData.reduce((sum: number, s: Specialty) => sum + (s.appointmentCount || 0), 0)
+        const total = assigned.reduce((sum: number, s: Specialty) => sum + (s.appointmentCount || 0), 0)
 
         setTotalAppointments(total)
-        setSpecialties(specialtiesData)
+        setSpecialties(assigned)
+        setHasAssigned(assigned.length > 0)
       }
     } catch (error) {
       console.error('Failed to fetch specialties data:', error)
@@ -101,6 +105,12 @@ export default function TenantSpecialtiesPage() {
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      ) : !hasAssigned ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <span className="material-symbols-outlined text-6xl text-outline-variant mb-4">medical_services</span>
+          <h3 className="text-xl font-bold text-on-surface">{t('tenant.areas.specialties.noSpecialties')}</h3>
+          <p className="text-on-surface-variant mt-2 max-w-md">{t('tenant.areas.specialties.noSpecialtiesDesc')}</p>
         </div>
       ) : (
         <section className="grid grid-cols-12 grid-rows-6 gap-5 h-[600px]">

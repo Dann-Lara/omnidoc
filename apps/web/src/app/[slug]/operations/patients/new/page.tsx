@@ -255,10 +255,9 @@ export default function NewPatientPage() {
                       className="w-full bg-surface-container-high dark:bg-slate-800 border-none rounded-lg text-sm font-semibold h-10 px-3 dark:text-white"
                     >
                       <option value="">{t('patients.form.select')}</option>
-                      <option value="MALE">{t('patients.form.masculine')}</option>
-                      <option value="FEMALE">{t('patients.form.feminine')}</option>
                       <option value="HOMBRE">{t('patients.form.man')}</option>
                       <option value="MUJER">{t('patients.form.woman')}</option>
+                      <option value="OTRO">{t('patients.form.other')}</option>
                     </select>
                   </div>
                 </div>

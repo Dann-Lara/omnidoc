@@ -4,6 +4,10 @@ import { Transform } from 'class-transformer'
 export class CreateNoteDto {
   @IsString()
   @IsOptional()
+  userId?: string
+
+  @IsString()
+  @IsOptional()
   specialtyId?: string
 
   @IsString()

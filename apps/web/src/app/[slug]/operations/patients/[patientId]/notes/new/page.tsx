@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Verified, Lock, X } from 'lucide-react'
@@ -29,6 +29,13 @@ interface Specialty {
   nameEs: string
 }
 
+interface Doctor {
+  id: string
+  firstName: string
+  lastName: string
+  specialties?: { specialtyId: string; specialty: { name: string } }[]
+}
+
 interface NoteFormData {
   bloodPressure: string
   heartRate: string
@@ -42,6 +49,7 @@ interface NoteFormData {
   plan: string
   isChronic: boolean
   specialtyId: string
+  userId: string
 }
 
 const staggerContainer = {
@@ -140,11 +148,13 @@ export default function NewNotePage() {
   const { lang, t } = useI18n()
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const slug = params.slug as string
   const patientId = params.patientId as string
 
   const [patient, setPatient] = useState<Patient | null>(null)
   const [specialties, setSpecialties] = useState<Specialty[]>([])
+  const [doctors, setDoctors] = useState<Doctor[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [showSealModal, setShowSealModal] = useState(false)
@@ -153,6 +163,9 @@ export default function NewNotePage() {
   const [medicationItems, setMedicationItems] = useState<{ name: string; dosage: string }[]>([
     { name: '', dosage: '' }
   ])
+
+  const prefillUserId = searchParams.get('userId') || ''
+  const prefillSpecialtyId = searchParams.get('specialtyId') || ''
 
   const [formData, setFormData] = useState<NoteFormData>({
     bloodPressure: '',
@@ -166,12 +179,14 @@ export default function NewNotePage() {
     diagnosis: '',
     plan: '',
     isChronic: false,
-    specialtyId: '',
+    specialtyId: prefillSpecialtyId,
+    userId: prefillUserId,
   })
 
   useEffect(() => {
     fetchPatient()
     fetchSpecialties()
+    fetchDoctors()
   }, [patientId])
 
   const fetchPatient = async () => {
@@ -206,8 +221,26 @@ export default function NewNotePage() {
     }
   }
 
+  const fetchDoctors = async () => {
+    try {
+      const res = await fetch(`${API_URL}/team`, {
+        credentials: 'include',
+      })
+      if (res.ok) {
+        const data = await res.json()
+        console.log('[NewNotePage] doctors response:', JSON.stringify(data.data?.[0]?.specialties, null, 2))
+        setDoctors(data.data || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch doctors:', err)
+    }
+  }
+
   const handleChange = (field: keyof NoteFormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+    if (field === 'userId') {
+      setFormData(prev => ({ ...prev, specialtyId: '' }))
+    }
     setError(null)
   }
 
@@ -342,6 +375,16 @@ export default function NewNotePage() {
   const spo2Status = getVitalStatus(spo2Value, 'spo2')
   const spo2Color = getVitalColor(spo2Status)
 
+  const availableSpecialties = (() => {
+    if (!formData.userId) return specialties
+
+    const doctor = doctors.find(d => d.id === formData.userId)
+    if (!doctor?.specialties || doctor.specialties.length === 0) return []
+
+    const doctorSpecIds = new Set(doctor.specialties.map(s => s.specialtyId))
+    return specialties.filter(s => doctorSpecIds.has(s.id))
+  })()
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -419,32 +462,52 @@ export default function NewNotePage() {
             </div>
           </motion.header>
 
-          <motion.section variants={fadeInUp} className="space-y-4">
+          <motion.section variants={fadeInUp}>
             <div className="flex items-center gap-2 mb-2">
-              <span className="material-symbols-outlined text-primary dark:text-blue-400" style={{ fontVariationSettings: "'FILL' 1" }}>medical_services</span>
+              <span className="material-symbols-outlined text-primary dark:text-blue-400" style={{ fontVariationSettings: "'FILL' 1" }}>assignment_ind</span>
               <h2 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant dark:text-slate-400">
-                {t('clinicalNotes.form.specialty')}
+                {t('clinicalNotes.form.doctorSpecialty')}
               </h2>
             </div>
-            <select
-              value={formData.specialtyId}
-              onChange={(e) => handleChange('specialtyId', e.target.value)}
-              className="w-full md:w-64 px-4 py-3 rounded-xl bg-surface dark:bg-slate-800 border border-surface-container dark:border-slate-700 text-on-surface dark:text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 transition-all cursor-pointer"
-            >
-              <option value="">
-                {t('clinicalNotes.form.selectSpecialty')}
-              </option>
-              {specialties.map((specialty) => (
-                <option key={specialty.id} value={specialty.id}>
-                  {(lang === 'es' ? specialty.nameEs : null) || specialty.nameEn}
-                </option>
-              ))}
-            </select>
-            {specialties.length === 0 && (
-              <p className="text-xs text-on-surface-variant dark:text-slate-500">
-                {t('clinicalNotes.form.noSpecialties')}
-              </p>
-            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <select
+                  value={formData.userId}
+                  onChange={(e) => handleChange('userId', e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-surface dark:bg-slate-800 border border-surface-container dark:border-slate-700 text-on-surface dark:text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 transition-all cursor-pointer"
+                >
+                  <option value="">
+                    {t('clinicalNotes.form.selectDoctor')}
+                  </option>
+                  {doctors.map((doctor) => (
+                    <option key={doctor.id} value={doctor.id}>
+                      {doctor.firstName} {doctor.lastName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <select
+                  value={formData.specialtyId}
+                  onChange={(e) => handleChange('specialtyId', e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-surface dark:bg-slate-800 border border-surface-container dark:border-slate-700 text-on-surface dark:text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 transition-all cursor-pointer"
+                >
+                  <option value="">
+                    {t('clinicalNotes.form.selectSpecialty')}
+                  </option>
+                  {availableSpecialties.map((specialty) => (
+                    <option key={`${specialty.id}-${specialty.nameEn}`} value={specialty.id}>
+                      {(lang === 'es' ? specialty.nameEs : null) || specialty.nameEn}
+                    </option>
+                  ))}
+                </select>
+                {availableSpecialties.length === 0 && formData.userId && (
+                  <p className="text-xs text-on-surface-variant dark:text-slate-500 mt-2">
+                    {t('clinicalNotes.form.noSpecialtiesForDoctor')}
+                  </p>
+                )}
+              </div>
+            </div>
           </motion.section>
 
           <motion.section variants={fadeInUp} className="space-y-4">
