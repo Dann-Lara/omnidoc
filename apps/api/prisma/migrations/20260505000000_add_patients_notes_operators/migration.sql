@@ -84,7 +84,7 @@ ALTER TABLE "Appointment"
     ADD COLUMN "reason" TEXT;
 
 -- Migrate doctorId to userId
-UPDATE "Appointment" SET "userId" = "doctorId"::uuid;
+UPDATE "Appointment" SET "userId" = "doctorId";
 
 -- Make userId NOT NULL after migration
 ALTER TABLE "Appointment" ALTER COLUMN "userId" SET NOT NULL;
@@ -147,4 +147,87 @@ ALTER TABLE "PatientAuditLog" ADD CONSTRAINT "PatientAuditLog_patientId_fkey" FO
 ALTER TABLE "PatientAuditLog" ADD CONSTRAINT "PatientAuditLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PatientAuditLog" ADD CONSTRAINT "PatientAuditLog_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
-
+-- ============================================
+-- PROTECCIÓN DEL SUPERADMIN
+-- ============================================
+-- Este bloque asegura que el superadmin siempre exista
+-- Si fue eliminado por alguna operación, se restaura automáticamente
+DO $$
+DECLARE
+    saas_org_id TEXT;
+    superadmin_role_id TEXT;
+    superadmin_supabase_id TEXT;
+    existing_superadmin_count INTEGER;
+BEGIN
+    -- Obtener la organización SaaS (OmniDoc SaaS)
+    SELECT id INTO saas_org_id FROM "Organization" WHERE slug = 'omnidoc-saas' LIMIT 1;
+    
+    -- Si no existe la organización SaaS, crearla
+    IF saas_org_id IS NULL THEN
+        INSERT INTO "Organization" (id, name, slug, type, features, branding, settings, "subscriptionStatus", "specialtyIds", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid(), 'OmniDoc SaaS', 'omnidoc-saas', 'CLINIC', '{"superadmin": true}', '{}', '{}', 'ACTIVE', ARRAY[]::TEXT[], NOW(), NOW())
+        RETURNING id INTO saas_org_id;
+    END IF;
+    
+    -- Obtener el rol SUPERADMIN
+    SELECT id INTO superadmin_role_id FROM "Role" WHERE "organizationId" = saas_org_id AND name = 'SUPERADMIN' LIMIT 1;
+    
+    -- Si no existe el rol, crearlo
+    IF superadmin_role_id IS NULL THEN
+        INSERT INTO "Role" (id, "organizationId", name, permissions, "isDefault", "createdAt")
+        VALUES (gen_random_uuid(), saas_org_id, 'SUPERADMIN', ARRAY['*'], false, NOW())
+        RETURNING id INTO superadmin_role_id;
+    END IF;
+    
+    -- Verificar si ya existe el superadmin
+    SELECT COUNT(*) INTO existing_superadmin_count FROM "User" WHERE email = 'superadmin@omnidoc.dev';
+    
+    -- Solo crear si no existe
+    IF existing_superadmin_count = 0 THEN
+        -- Intentar obtener el ID de Supabase si existe
+        -- (Esto requiere que el usuario ya exista en Supabase)
+        -- Si no existe, creamos con un ID genérico que el seed actualizará
+        INSERT INTO "User" (
+            id, 
+            "supabaseId", 
+            "organizationId", 
+            "roleId", 
+            email, 
+            "firstName", 
+            "lastName", 
+            "userType", 
+            subtype, 
+            avatar, 
+            "isTenantAdmin", 
+            "apiKey", 
+            settings, 
+            "specialtyIds", 
+            permissions, 
+            status, 
+            "lastLoginAt", 
+            "createdAt", 
+            "updatedAt"
+        )
+        VALUES (
+            gen_random_uuid(),
+            '00000000-0000-0000-0000-000000000000', -- Placeholder, el seed lo actualizará
+            saas_org_id,
+            superadmin_role_id,
+            'superadmin@omnidoc.dev',
+            'Super',
+            'Admin',
+            'OWNER',
+            NULL,
+            NULL,
+            true,
+            NULL,
+            '{}',
+            ARRAY[]::TEXT[],
+            NULL,
+            'ACTIVE',
+            NULL,
+            NOW(),
+            NOW()
+        );
+    END IF;
+END $$;
