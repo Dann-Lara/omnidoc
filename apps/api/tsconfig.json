@@ -21,6 +21,7 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
-    "typeRoots": ["./node_modules/@types", "./node_modules/.prisma/client"]
+    "typeRoots": ["./node_modules/@types", "./node_modules/.prisma/client"],
+    "types": ["node"]
   }
 }

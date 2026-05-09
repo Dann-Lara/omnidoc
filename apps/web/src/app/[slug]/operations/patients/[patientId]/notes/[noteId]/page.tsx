@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Activity, FileDown, Send, CheckCircle, Loader } from 'lucide-react'
+import { ArrowLeft, Activity, FileDown, Send, CheckCircle, Loader, Pill, PackageCheck } from 'lucide-react'
 import { pdf } from '@react-pdf/renderer'
 import { ClinicalNotePDF } from '@/components/pdf/ClinicalNotePDF'
 import { Modal } from '@/components/Modal'
@@ -20,6 +20,18 @@ interface Patient {
   dateOfBirth: string | null
   gender: string | null
   bloodType: string | null
+}
+
+interface ParsedMedication {
+  productId: string
+  productName: string
+  quantity: number
+  instructions?: string
+}
+
+interface ProductInfo {
+  id: string
+  unitsPerBox: number
 }
 
 interface Note {
@@ -40,6 +52,7 @@ interface Note {
   subjective: string | null
   diagnosis: string | null
   plan: string | null
+  medicationDispensed?: boolean
   doctor?: { id: string; firstName: string; lastName: string; specialty: string | null }
   specialtyId: string | null
 }
@@ -76,6 +89,17 @@ function formatDateTime(dateStr: string | null): string {
   })
 }
 
+function parsePlan(plan: string | null): { text: string; medications: ParsedMedication[] } {
+  if (!plan) return { text: '', medications: [] }
+  try {
+    const parsed = JSON.parse(plan)
+    if (parsed && typeof parsed === 'object' && 'medications' in parsed) {
+      return { text: parsed.text || '', medications: parsed.medications || [] }
+    }
+  } catch {}
+  return { text: plan, medications: [] }
+}
+
 export default function NoteDetailPage() {
   const { t } = useI18n()
   const params = useParams()
@@ -93,6 +117,38 @@ export default function NoteDetailPage() {
   const [patientEmail, setPatientEmail] = useState('')
   const [sendStatus, setSendStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
   const [emailError, setEmailError] = useState('')
+  const [productInfoMap, setProductInfoMap] = useState<Record<string, ProductInfo>>({})
+  const [dispenseStatus, setDispenseStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+
+  const planParsed = note ? parsePlan(note.plan) : { text: '', medications: [] }
+  const hasMedications = planParsed.medications.length > 0
+
+  const handleDispense = async () => {
+    if (!note) return
+    setDispenseStatus('loading')
+    try {
+      const res = await fetch(`${API_URL}/pharmacy/dispens`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          patientId: note.patientId,
+          noteId: note.id,
+          medications: planParsed.medications.map((m) => ({
+            productId: m.productId,
+            quantity: m.quantity,
+          })),
+        }),
+      })
+      if (!res.ok) throw new Error('Dispense failed')
+      setNote({ ...note, medicationDispensed: true })
+      setDispenseStatus('done')
+      setTimeout(() => setDispenseStatus('idle'), 3000)
+    } catch {
+      setDispenseStatus('error')
+      setTimeout(() => setDispenseStatus('idle'), 3000)
+    }
+  }
 
   const handleExportPDF = async () => {
     if (!note) return
@@ -170,6 +226,27 @@ export default function NoteDetailPage() {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!note || planParsed.medications.length === 0) return
+    const productIds = planParsed.medications.map(m => m.productId)
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch(`${API_URL}/pharmacy/product-library`, { credentials: 'include' })
+        if (res.ok) {
+          const allProducts: any[] = await res.json()
+          const map: Record<string, ProductInfo> = {}
+          for (const p of allProducts) {
+            if (productIds.includes(p.id)) {
+              map[p.id] = { id: p.id, unitsPerBox: p.unitsPerBox || 1 }
+            }
+          }
+          setProductInfoMap(map)
+        }
+      } catch {}
+    }
+    fetchProducts()
+  }, [note?.id])
 
   const age = calculateAge(patient?.dateOfBirth || null)
   const patientName = patient ? `${patient.firstName} ${patient.lastName}` : ''
@@ -350,33 +427,110 @@ export default function NoteDetailPage() {
             </h2>
             <div className="bg-primary/5 rounded-2xl p-8 border border-primary/10 relative overflow-hidden">
               <div className="absolute -right-4 -bottom-4 opacity-10">
-                <span className="material-symbols-outlined text-8xl text-primary">pill</span>
+                <Pill className="w-32 h-32 text-primary" />
               </div>
-              <div className="relative z-10 grid grid-cols-2 gap-10">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-primary w-5 h-5">medication</span>
-                    <span className="font-headline font-bold text-primary">
-                      {t('clinicalNotes.view.pharmacology')}
-                    </span>
+              <div className="relative z-10 space-y-6">
+                {hasMedications && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <Pill className="w-5 h-5 text-primary" />
+                      <span className="font-headline font-bold text-primary">
+                        {t('clinicalNotes.view.prescribedMedications')}
+                      </span>
+                      {note.medicationDispensed ? (
+                        <span className="px-3 py-1 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-700 flex items-center gap-1">
+                          <PackageCheck className="w-3 h-3" /> {t('clinicalNotes.view.dispensedStatus')}
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 text-[10px] font-bold rounded-full bg-amber-100 text-amber-700">
+                          {t('clinicalNotes.view.pendingDispense')}
+                        </span>
+                      )}
+                    </div>
+                    <div className="bg-surface/80 rounded-xl overflow-hidden border border-primary/10">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-primary/10 text-on-surface-variant text-[10px] uppercase tracking-widest">
+                            <th className="text-left px-4 py-3 font-semibold">{t('clinicalNotes.view.medication')}</th>
+                            <th className="text-center px-4 py-3 font-semibold">{t('clinicalNotes.view.qty')}</th>
+                            <th className="text-left px-4 py-3 font-semibold">{t('clinicalNotes.view.instructions')}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-primary/5">
+                            {planParsed.medications.map((med, i) => {
+                              const info = productInfoMap[med.productId]
+                              const unitsPerBox = info?.unitsPerBox || 1
+                              const boxes = Math.floor(med.quantity / unitsPerBox)
+                              const remainder = med.quantity % unitsPerBox
+                              const qtyText = boxes > 0
+                                ? `${boxes} caja${boxes > 1 ? 's' : ''}${remainder > 0 ? ` + ${remainder} unidade${remainder > 1 ? 's' : ''}` : ''}`
+                                : `${med.quantity} unidades`
+                              return (
+                              <tr key={i}>
+                                <td className="px-4 py-3 font-semibold text-on-surface">{med.productName}</td>
+                                <td className="px-4 py-3 text-center text-on-surface-variant">
+                                  <span>{med.quantity}</span>
+                                  {info && (
+                                    <span className="block text-[10px] text-on-surface-variant/60">{qtyText}</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-on-surface-variant">{med.instructions || '—'}</td>
+                              </tr>
+                              )
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
+                    {!note.medicationDispensed && (
+                      <div className="mt-4">
+                        <button
+                          onClick={handleDispense}
+                          disabled={dispenseStatus === 'loading'}
+                          className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-all disabled:opacity-50"
+                        >
+                          {dispenseStatus === 'loading' ? (
+                            <Loader className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <PackageCheck className="w-4 h-4" />
+                          )}
+                          {dispenseStatus === 'loading'
+                            ? t('clinicalNotes.view.dispensingNow')
+                            : dispenseStatus === 'done'
+                              ? t('clinicalNotes.view.dispensedSuccess')
+                              : dispenseStatus === 'error'
+                                ? t('clinicalNotes.view.dispensedFailed')
+                                : t('clinicalNotes.view.dispenseButton')}
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div className="space-y-1">
-                    <p className="font-bold text-on-surface text-lg">
-                      {note.plan || t('clinicalNotes.view.noPlan')}
-                    </p>
+                )}
+                <div className="grid grid-cols-2 gap-10">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-primary w-5 h-5">medication</span>
+                      <span className="font-headline font-bold text-primary">
+                        {t('clinicalNotes.view.pharmacology')}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-bold text-on-surface text-lg">
+                        {planParsed.text || t('clinicalNotes.view.noPlan')}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-primary w-5 h-5">fitness_center</span>
-                    <span className="font-headline font-bold text-primary">
-                      {t('clinicalNotes.view.lifestyleChanges')}
-                    </span>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-primary w-5 h-5">fitness_center</span>
+                      <span className="font-headline font-bold text-primary">
+                        {t('clinicalNotes.view.lifestyleChanges')}
+                      </span>
+                    </div>
+                    <ul className="text-sm text-on-surface-variant space-y-2 list-disc list-inside">
+                      <li>{t('clinicalNotes.view.scheduledFollowUp')}</li>
+                      <li>{t('clinicalNotes.view.vitalSignsMonitoring')}</li>
+                    </ul>
                   </div>
-                  <ul className="text-sm text-on-surface-variant space-y-2 list-disc list-inside">
-                    <li>{t('clinicalNotes.view.scheduledFollowUp')}</li>
-                    <li>{t('clinicalNotes.view.vitalSignsMonitoring')}</li>
-                  </ul>
                 </div>
               </div>
             </div>

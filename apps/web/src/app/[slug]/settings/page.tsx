@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useParams, useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
-import { Globe, CheckCircle, AlertCircle, Loader2, ChevronLeft } from 'lucide-react'
+import { Globe, DollarSign, CheckCircle, AlertCircle, Loader2, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -18,9 +18,16 @@ export default function TenantSettingsPage() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const [currentLang, setCurrentLang] = useState<'en' | 'es'>('es')
+  const [currentCurrency, setCurrentCurrency] = useState<string>('USD')
+
+  const CURRENCIES = [
+    { code: 'USD', symbol: '$', label: 'USD (US Dollar)' },
+    { code: 'MXN', symbol: 'MX$', label: 'MXN (Peso Mexicano)' },
+    { code: 'EUR', symbol: '€', label: 'EUR (Euro)' },
+  ]
 
   useEffect(() => {
-    fetchOrgLang()
+    Promise.all([fetchOrgLang(), fetchOrgCurrency()])
   }, [])
 
   const fetchOrgLang = async () => {
@@ -37,6 +44,20 @@ export default function TenantSettingsPage() {
       console.error('Error fetching org lang:', err)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchOrgCurrency = async () => {
+    try {
+      const res = await fetch(`${API_URL}/settings/org-currency/${slug}`, {
+        credentials: 'include',
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setCurrentCurrency(data.currency)
+      }
+    } catch (err) {
+      console.error('Error fetching org currency:', err)
     }
   }
 
@@ -68,6 +89,36 @@ export default function TenantSettingsPage() {
       }
     } catch (err) {
       setError('Error saving language')
+      console.error(err)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleSaveCurrency = async (currency: string) => {
+    setIsSaving(true)
+    setError('')
+    setSaved(false)
+
+    try {
+      const res = await fetch(`${API_URL}/settings/org-currency/${slug}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ currency }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setCurrentCurrency(data.currency)
+        setSaved(true)
+        setTimeout(() => setSaved(false), 3000)
+      } else {
+        const data = await res.json()
+        setError(data.message || 'Error saving')
+      }
+    } catch (err) {
+      setError('Error saving currency')
       console.error(err)
     } finally {
       setIsSaving(false)
@@ -156,6 +207,35 @@ export default function TenantSettingsPage() {
             <span className="text-sm">{error}</span>
           </div>
         )}
+      </div>
+
+      <div className="bg-surface-container-low rounded-xl p-6 max-w-xl">
+        <h2 className="text-xl font-bold text-on-surface mb-4 flex items-center gap-2">
+          <DollarSign className="w-5 h-5" />
+          {t('tenant.settings.currency') || 'Currency'}
+        </h2>
+        
+        <p className="text-on-surface-variant mb-6">
+          {t('tenant.settings.currencyDesc') || 'Operating currency for this organization.'}
+        </p>
+
+        <div className="flex flex-wrap gap-4">
+          {CURRENCIES.map((c) => (
+            <button
+              key={c.code}
+              onClick={() => handleSaveCurrency(c.code)}
+              disabled={isSaving || currentCurrency === c.code}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                currentCurrency === c.code
+                  ? 'bg-primary text-white'
+                  : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+              } disabled:opacity-50`}
+            >
+              {currentCurrency === c.code && <CheckCircle className="w-4 h-4" />}
+              {c.symbol} {c.code}
+            </button>
+          ))}
+        </div>
       </div>
     </motion.div>
   )

@@ -18,6 +18,7 @@ import { SettingsModule } from './settings/settings.module';
 import { PatientsModule } from './patients/patients.module';
 import { PatientNotesModule } from './patient-notes/patient-notes.module';
 import { AppointmentsModule } from './appointments/appointments.module';
+import { PharmacyModule } from './pharmacy/pharmacy.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { AppointmentsModule } from './appointments/appointments.module';
     PatientsModule,
     PatientNotesModule,
     AppointmentsModule,
+    PharmacyModule,
   ],
 
 })

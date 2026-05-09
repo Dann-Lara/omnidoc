@@ -32,6 +32,9 @@ model Organization {
   teamInvitations    TeamInvitation[]
   tenantSpecialties  TenantSpecialty[]
   users              User[]
+  inventoryBatches  InventoryBatch[]
+  inventoryLogs     InventoryLog[]
+  dispensedMedications DispensedMedication[]
 
   @@index([slug])
   @@index([subscriptionStatus])
@@ -310,6 +313,8 @@ model PatientNote {
   isSealed       Boolean      @default(false)
   sealedAt       DateTime?
   signature      String?
+  medicationDispensed Boolean      @default(false)
+  dispensedMedications DispensedMedication[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   doctor         User         @relation(fields: [doctorId], references: [id])
@@ -321,6 +326,7 @@ model PatientNote {
   @@index([organizationId])
   @@index([isSealed])
   @@index([createdAt])
+  @@index([medicationDispensed])
 }
 
 model PatientAuditLog {
@@ -412,4 +418,96 @@ enum UserStatus {
   ACTIVE
   INACTIVE
   PENDING_INVITATION
+}
+
+enum LogType {
+  DISPENSED
+  RESTOCKED
+  ADJUSTED
+  EXPIRED
+}
+
+// --- PHARMACY MODULE (FEAT-PHARMA-001) ---
+
+model ProductLibrary {
+  id                String   @id @default(cuid())
+  commercialName    String
+  activeSubstance   String
+  presentation      String   // Dosis/Unidad
+  laboratory        String
+  barcode           String?  @unique
+  unitsPerBox       Int      @default(1)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  inventoryBatches    InventoryBatch[]
+  dispensedMedications DispensedMedication[]
+
+  @@index([commercialName])
+  @@index([activeSubstance])
+  @@index([barcode])
+  @@index([laboratory])
+  @@index([isActive])
+}
+
+model InventoryBatch {
+  id                String   @id @default(cuid())
+  tenantId          String
+  productId         String
+  batchNumber       String?
+  quantity          Int
+  costPerBox        Decimal? @db.Decimal(10, 2)
+  expiryDate        DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  organization      Organization @relation(fields: [tenantId], references: [id])
+  product           ProductLibrary @relation(fields: [productId], references: [id])
+  inventoryLogs     InventoryLog[]
+  dispensedMedications DispensedMedication[]
+
+  @@index([tenantId])
+  @@index([productId])
+  @@index([expiryDate])
+  @@index([batchNumber])
+}
+
+model InventoryLog {
+  id                String   @id @default(cuid())
+  tenantId          String
+  batchId           String
+  patientId         String?
+  doctorId          String
+  quantity          Int
+  type              LogType  @default(RESTOCKED)
+  reason            String?  // Justificación para ajustes manuales
+  createdAt         DateTime @default(now())
+  organization      Organization @relation(fields: [tenantId], references: [id])
+  batch             InventoryBatch @relation(fields: [batchId], references: [id])
+
+  @@index([tenantId])
+  @@index([batchId])
+  @@index([doctorId])
+  @@index([patientId])
+  @@index([createdAt])
+  @@index([type])
+}
+
+model DispensedMedication {
+  id                String   @id @default(cuid())
+  tenantId          String
+  noteId            String
+  batchId           String
+  productId         String
+  quantity          Int
+  dispensedBy       String
+  createdAt         DateTime @default(now())
+  organization      Organization @relation(fields: [tenantId], references: [id])
+  note              PatientNote @relation(fields: [noteId], references: [id])
+  batch             InventoryBatch @relation(fields: [batchId], references: [id])
+  product           ProductLibrary @relation(fields: [productId], references: [id])
+
+  @@index([tenantId])
+  @@index([noteId])
+  @@index([batchId])
+  @@index([productId])
 }

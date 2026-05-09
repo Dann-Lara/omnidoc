@@ -76,4 +76,27 @@ export class SettingsController {
     }
     return this.settingsService.updateOrgLang(orgIdOrSlug, body.lang);
   }
+
+  @Get('org-currency/:orgIdOrSlug')
+  @UseGuards(SupabaseAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get organization currency' })
+  @ApiResponse({ status: 200, description: 'Returns organization currency' })
+  async getOrgCurrency(@Param('orgIdOrSlug') orgIdOrSlug: string, @Req() req: Request) {
+    return this.settingsService.getOrgCurrency(orgIdOrSlug);
+  }
+
+  @Patch('org-currency/:orgIdOrSlug')
+  @UseGuards(SupabaseAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update organization currency' })
+  @ApiResponse({ status: 200, description: 'Organization currency updated' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async updateOrgCurrency(
+    @Param('orgIdOrSlug') orgIdOrSlug: string,
+    @Body() body: { currency: string },
+    @Req() req: Request,
+  ) {
+    return this.settingsService.updateOrgCurrency(orgIdOrSlug, body.currency);
+  }
 }

@@ -102,6 +102,7 @@ apps/web/src/app/
 | 06 | [06-team/README.md](./06-team/README.md) | Gestión de equipo y permisos | ✅ |
 | 07 | [07-patients/README.md](./07-patients/README.md) | Pacientes y Expediente Clínico | ✅ |
 | 08 | [08-appointments/README.md](./08-appointments/README.md) | Citas médicas | ✅ Completado |
+| 09 | [09-pharmacy/README.md](./09-pharmacy/README.md) | Farmacia e Inventario (FEAT-PHARMA-001) | ⏳ Pendiente |
 
 ---
 
@@ -176,6 +177,7 @@ apps/web/src/app/
           ├── 01-auth/04-refactor (middleware debe actualizar)
           ├── 07-patients ✅ (implementado completamente)
           ├── 08-appointments ✅ (implementado completamente)
+          ├── 09-pharmacy ⏳ (pendiente - FEAT-PHARMA-001)
           ├── 07-specialties ✅ (12 endpoints)
           ├── tailwind-design-system skill
           ├── framer-motion skill
@@ -200,4 +202,5 @@ apps/web/src/app/
 
 **i18n Migration** → Migrar 19 archivos de tenant que aún usan ternarios
 **API Connection** → Conectar Dashboard stats mock a endpoints reales
-**Audits Page** → Conectar a API real de auditoría
+**Audits Page** → Conectar a API real
+**Pharmacy Module** → Implementar 09-pharmacy (FEAT-PHARMA-001) de auditoría
