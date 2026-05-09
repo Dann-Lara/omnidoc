@@ -52,6 +52,7 @@ export function TenantSidebar({ isOpen, onClose, isCollapsed: externalCollapsed,
   const areasItems = [
     { href: `${basePath}/areas/specialties`, icon: Folder, labelKey: 'tenant.nav.specialties' },
     ...(userRole === 'OWNER' ? [{ href: `${basePath}/areas/team`, icon: Users, labelKey: 'tenant.nav.team' }] : []),
+    { href: `${basePath}/pharmacy`, icon: Activity, labelKey: 'tenant.nav.pharmacy' },
   ]
 
   const operacionesItems = [
@@ -150,9 +151,9 @@ export function TenantSidebar({ isOpen, onClose, isCollapsed: externalCollapsed,
 
         <div className="mt-4">
           <p className={`text-[10px] font-bold uppercase tracking-[0.15em] text-on-surface-variant dark:text-slate-500 mb-3 ${isCollapsed ? 'hidden' : ''}`}>
-            {t('tenant.nav.areas')}
+            {t('sidebar.operationsLabel')}
           </p>
-          {areasItems.map((item) => {
+          {operacionesItems.map((item) => {
             const Icon = item.icon
             const active = isActive(item.href)
             return (
@@ -185,9 +186,9 @@ export function TenantSidebar({ isOpen, onClose, isCollapsed: externalCollapsed,
 
         <div className="mt-4">
           <p className={`text-[10px] font-bold uppercase tracking-[0.15em] text-on-surface-variant dark:text-slate-500 mb-3 ${isCollapsed ? 'hidden' : ''}`}>
-            {t('sidebar.operationsLabel')}
+            {t('tenant.nav.areas')}
           </p>
-          {operacionesItems.map((item) => {
+          {areasItems.map((item) => {
             const Icon = item.icon
             const active = isActive(item.href)
             return (

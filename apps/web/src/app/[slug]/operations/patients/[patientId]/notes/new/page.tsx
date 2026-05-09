@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Verified, Lock, X } from 'lucide-react'
+import { ArrowLeft, Verified, Lock, X, Search, Package, PackageCheck } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -34,6 +34,28 @@ interface Doctor {
   firstName: string
   lastName: string
   specialties?: { specialtyId: string; specialty: { name: string } }[]
+}
+
+interface InventoryProduct {
+  product: {
+    id: string
+    commercialName: string
+    activeSubstance: string
+    presentation: string
+    laboratory: string
+    unitsPerBox: number
+  }
+  totalStock: number
+  batches: { id: string; expiryDate: string; quantity: number }[]
+}
+
+interface MedicationItem {
+  productId: string
+  productName: string
+  presentation: string
+  quantity: number
+  instructions: string
+  dispenseNow: boolean
 }
 
 interface NoteFormData {
@@ -160,9 +182,11 @@ export default function NewNotePage() {
   const [showSealModal, setShowSealModal] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [medicationItems, setMedicationItems] = useState<{ name: string; dosage: string }[]>([
-    { name: '', dosage: '' }
-  ])
+  const [medicationItems, setMedicationItems] = useState<MedicationItem[]>([])
+  const [inventoryProducts, setInventoryProducts] = useState<InventoryProduct[]>([])
+  const [productSearch, setProductSearch] = useState('')
+  const [showProductPicker, setShowProductPicker] = useState(false)
+  const productSearchRef = useRef<HTMLDivElement>(null)
 
   const prefillUserId = searchParams.get('userId') || ''
   const prefillSpecialtyId = searchParams.get('specialtyId') || ''
@@ -187,6 +211,15 @@ export default function NewNotePage() {
     fetchPatient()
     fetchSpecialties()
     fetchDoctors()
+    fetchInventory()
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (productSearchRef.current && !productSearchRef.current.contains(e.target as Node)) {
+        setShowProductPicker(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [patientId])
 
   const fetchPatient = async () => {
@@ -236,28 +269,60 @@ export default function NewNotePage() {
     }
   }
 
+  const fetchInventory = async () => {
+    try {
+      const res = await fetch(`${API_URL}/pharmacy/inventory`, {
+        credentials: 'include',
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setInventoryProducts(data.data || data || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch inventory:', err)
+    }
+  }
+
+  const selectProduct = (item: InventoryProduct) => {
+    const boxSize = item.product.unitsPerBox || 1
+    setMedicationItems(prev => [
+      ...prev,
+      {
+        productId: item.product.id,
+        productName: item.product.commercialName,
+        presentation: item.product.presentation,
+        quantity: boxSize,
+        instructions: '',
+        dispenseNow: false,
+      },
+    ])
+    setShowProductPicker(false)
+    setProductSearch('')
+  }
+
+  const updateMedication = (index: number, field: keyof MedicationItem, value: any) => {
+    const updated = [...medicationItems]
+    ;(updated[index] as any)[field] = value
+    setMedicationItems(updated)
+  }
+
+  const removeMedication = (index: number) => {
+    setMedicationItems(medicationItems.filter((_, i) => i !== index))
+  }
+
+  const filteredProducts = inventoryProducts.filter(
+    (p) =>
+      (p.product.commercialName || '').toLowerCase().includes(productSearch.toLowerCase()) ||
+      (p.product.activeSubstance || '').toLowerCase().includes(productSearch.toLowerCase()) ||
+      (p.product.laboratory || '').toLowerCase().includes(productSearch.toLowerCase()),
+  )
+
   const handleChange = (field: keyof NoteFormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     if (field === 'userId') {
       setFormData(prev => ({ ...prev, specialtyId: '' }))
     }
     setError(null)
-  }
-
-  const addMedicationItem = () => {
-    setMedicationItems([...medicationItems, { name: '', dosage: '' }])
-  }
-
-  const updateMedicationItem = (index: number, field: 'name' | 'dosage', value: string) => {
-    const updated = [...medicationItems]
-    updated[index][field] = value
-    setMedicationItems(updated)
-  }
-
-  const removeMedicationItem = (index: number) => {
-    if (medicationItems.length > 1) {
-      setMedicationItems(medicationItems.filter((_, i) => i !== index))
-    }
   }
 
   const handleSaveDraft = async () => {
@@ -271,6 +336,13 @@ export default function NewNotePage() {
         oxygenSat: formData.oxygenSat ? parseInt(formData.oxygenSat) : undefined,
         weight: formData.weight ? parseFloat(formData.weight) : undefined,
         height: formData.height ? parseFloat(formData.height) : undefined,
+        prescribedMedications: medicationItems.map((m) => ({
+          productId: m.productId,
+          productName: m.productName,
+          quantity: m.quantity,
+          instructions: m.instructions || undefined,
+        })),
+        dispenseNow: medicationItems.some((m) => m.dispenseNow) || undefined,
       }
 
       const res = await fetch(`${API_URL}/patients/${patientId}/notes`, {
@@ -311,6 +383,13 @@ export default function NewNotePage() {
           formData.weight ? parseFloat(formData.weight) : null,
           formData.height ? parseFloat(formData.height) : null
         ),
+        prescribedMedications: medicationItems.map((m) => ({
+          productId: m.productId,
+          productName: m.productName,
+          quantity: m.quantity,
+          instructions: m.instructions || undefined,
+        })),
+        dispenseNow: medicationItems.some((m) => m.dispenseNow) || undefined,
       }
 
       const res = await fetch(`${API_URL}/patients/${patientId}/notes`, {
@@ -698,43 +777,164 @@ export default function NewNotePage() {
             </div>
             <div className="bg-surface-container-lowest dark:bg-slate-900/50 border border-outline-variant/10 dark:border-slate-800 rounded-2xl p-5 space-y-4">
               <div className="space-y-3">
+                <div ref={productSearchRef} className="relative">
+                  <div
+                    onClick={() => setShowProductPicker(!showProductPicker)}
+                    className="flex items-center gap-3 w-full px-4 py-3.5 bg-surface-container dark:bg-slate-800 rounded-xl cursor-pointer text-sm border-2 border-dashed border-outline-variant/20 dark:border-slate-700 hover:border-primary/40 dark:hover:border-blue-500/40 hover:bg-surface-container-high dark:hover:bg-slate-700 transition-all"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-blue-500/10 flex items-center justify-center">
+                      <Search className="w-4 h-4 text-primary dark:text-blue-400" />
+                    </div>
+                    <span className="text-on-surface-variant dark:text-slate-400 font-medium">{t('clinicalNotes.form.searchProduct')}</span>
+                    {medicationItems.length > 0 && (
+                      <span className="ml-auto px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-primary/10 text-primary dark:text-blue-400">
+                        {medicationItems.length}
+                      </span>
+                    )}
+                  </div>
+                  {showProductPicker && (
+                    <div className="absolute top-full left-0 right-0 z-20 mt-2 bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant/10 dark:border-slate-800 rounded-xl shadow-2xl max-h-80 overflow-hidden">
+                      <div className="p-3 border-b border-outline-variant/10 dark:border-slate-800">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant dark:text-slate-400" />
+                          <input
+                            className="w-full bg-surface-container dark:bg-slate-800 border-none rounded-xl pl-10 pr-4 py-2.5 text-sm text-on-surface dark:text-white placeholder:text-on-surface-variant/50 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-primary/30"
+                            placeholder={t('clinicalNotes.form.searchProductPlaceholder')}
+                            value={productSearch}
+                            onChange={(e) => setProductSearch(e.target.value)}
+                            autoFocus
+                          />
+                        </div>
+                      </div>
+                      <div className="overflow-y-auto max-h-60">
+                        {filteredProducts.length === 0 ? (
+                          <div className="flex flex-col items-center gap-2 py-10 text-center">
+                            <Package className="w-8 h-8 text-outline-variant/50" />
+                            <p className="text-sm text-on-surface-variant dark:text-slate-500">{t('clinicalNotes.form.noProductsFound')}</p>
+                          </div>
+                        ) : (
+                          filteredProducts.map((p) => {
+                            const stockColor = p.totalStock > 50
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : p.totalStock > 10
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-rose-600 dark:text-rose-400'
+                            return (
+                              <button
+                                key={p.product.id}
+                                onClick={() => selectProduct(p)}
+                                className="w-full text-left px-4 py-3.5 hover:bg-surface-container dark:hover:bg-slate-800/80 transition-colors border-b border-outline-variant/5 last:border-0 group"
+                              >
+                                <div className="flex items-center justify-between gap-4">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-bold text-on-surface dark:text-white group-hover:text-primary dark:group-hover:text-blue-400 transition-colors truncate">{p.product.commercialName}</p>
+                                    <p className="text-xs text-on-surface-variant dark:text-slate-400 mt-0.5">{p.product.presentation}</p>
+                                    <p className="text-[10px] text-on-surface-variant/60 dark:text-slate-500 mt-0.5">{p.product.laboratory}</p>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <p className={`text-sm font-bold ${stockColor}`}>{p.totalStock}</p>
+                                    <p className="text-[10px] text-on-surface-variant/60 dark:text-slate-500">{t('clinicalNotes.form.units')}</p>
+                                    {p.product.unitsPerBox && (
+                                      <p className="text-[10px] text-on-surface-variant/50 dark:text-slate-500">
+                                        {Math.floor(p.totalStock / p.product.unitsPerBox)} {t('tenant.pharmacy.inventory.boxes').replace('{n}', String(Math.floor(p.totalStock / p.product.unitsPerBox)))} · {p.product.unitsPerBox}/caja
+                                      </p>
+                                    )}
+                                    {p.batches.length > 0 && (
+                                      <p className="text-[10px] text-on-surface-variant/50 dark:text-slate-500 mt-0.5">
+                                        {t('clinicalNotes.form.expires')}: {p.batches[0].expiryDate.split('T')[0]}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </button>
+                            )
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {medicationItems.map((item, index) => (
-                  <div key={index} className="flex items-center gap-3 pb-3 border-b border-outline-variant/20 dark:border-slate-700 last:border-0">
-                    <span className="w-7 h-7 rounded-full bg-surface-container dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-on-surface-variant dark:text-slate-400">
-                      {index + 1}
-                    </span>
-                    <input 
-                      className="flex-1 bg-transparent border-none text-on-surface dark:text-white font-medium focus:ring-0 placeholder:text-on-surface-variant/40 dark:placeholder:text-slate-600" 
-                      placeholder={t('clinicalNotes.form.medicationPlaceholder')}
-                      type="text"
-                      value={item.name}
-                      onChange={(e) => updateMedicationItem(index, 'name', e.target.value)}
-                    />
-                    <input 
-                      className="w-36 bg-surface-container-low dark:bg-slate-800 border-none rounded-lg px-3 py-2 text-sm text-on-surface dark:text-white" 
-                      placeholder={t('clinicalNotes.form.dosagePlaceholder')}
-                      type="text"
-                      value={item.dosage}
-                      onChange={(e) => updateMedicationItem(index, 'dosage', e.target.value)}
-                    />
-                    <button 
-                      onClick={() => removeMedicationItem(index)}
-                      className="text-on-surface-variant dark:text-slate-500 hover:text-error dark:hover:text-rose-400 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                  <div key={index} className="relative group rounded-xl bg-surface-container-low dark:bg-slate-800/40 border border-outline-variant/10 dark:border-slate-700/50 p-4 transition-all hover:border-primary/20 dark:hover:border-blue-500/20 hover:shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary-container dark:from-blue-500 dark:to-blue-700 text-white flex items-center justify-center text-xs font-bold shadow-sm shrink-0">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0 pt-0.5">
+                        <p className="text-sm font-bold text-on-surface dark:text-white truncate">{item.productName}</p>
+                        <p className="text-xs text-on-surface-variant dark:text-slate-400">{item.presentation}</p>
+                      </div>
+                      <button
+                        onClick={() => removeMedication(index)}
+                        className="shrink-0 w-7 h-7 rounded-lg bg-surface-container dark:bg-slate-700 flex items-center justify-center text-on-surface-variant dark:text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-error-container dark:hover:bg-rose-900/50 hover:text-error dark:hover:text-rose-400 transition-all"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="flex items-end gap-3 mt-3 pl-11">
+                          <div className="w-28">
+                            <label className="text-[10px] font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-wider block mb-1.5">{t('clinicalNotes.form.quantity')}</label>
+                            <div className="flex items-center gap-0">
+                              <button
+                                onClick={() => updateMedication(index, 'quantity', Math.max(1, item.quantity - 1))}
+                                className="w-8 h-8 rounded-l-lg bg-surface-container dark:bg-slate-700 flex items-center justify-center text-on-surface-variant dark:text-slate-400 hover:bg-surface-container-high dark:hover:bg-slate-600 transition-colors border-r border-surface-container-high dark:border-slate-600"
+                              >
+                                <span className="text-lg font-bold leading-none">−</span>
+                              </button>
+                              <input
+                                className="w-10 h-8 bg-surface-container dark:bg-slate-700 text-center text-sm font-bold text-on-surface dark:text-white border-none focus:ring-0 px-0"
+                                type="number"
+                                min={1}
+                                value={item.quantity}
+                                onChange={(e) => updateMedication(index, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
+                              />
+                              <button
+                                onClick={() => updateMedication(index, 'quantity', item.quantity + 1)}
+                                className="w-8 h-8 rounded-r-lg bg-surface-container dark:bg-slate-700 flex items-center justify-center text-on-surface-variant dark:text-slate-400 hover:bg-surface-container-high dark:hover:bg-slate-600 transition-colors border-l border-surface-container-high dark:border-slate-600"
+                              >
+                                <span className="text-lg font-bold leading-none">+</span>
+                              </button>
+                            </div>
+                            <p className="text-[9px] text-on-surface-variant/50 mt-1">
+                              {(() => {
+                                const inv = inventoryProducts.find(p => p.product.id === item.productId)
+                                const upb = inv?.product.unitsPerBox || 1
+                                const boxes = Math.floor(item.quantity / upb)
+                                const rem = item.quantity % upb
+                                const parts = []
+                                if (boxes > 0) parts.push(`${boxes} ${t('tenant.pharmacy.inventory.boxes').replace('{n}', String(boxes))}`)
+                                if (rem > 0) parts.push(`${rem} ${t('clinicalNotes.form.units')}`)
+                                return parts.join(' + ') || `${item.quantity} unid.`
+                              })()}
+                            </p>
+                          </div>
+                      <div className="flex-1">
+                        <label className="text-[10px] font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-wider block mb-1.5">{t('clinicalNotes.form.instructions')}</label>
+                        <input
+                          className="w-full h-8 bg-surface-container dark:bg-slate-700 border-none rounded-lg px-3 text-sm text-on-surface dark:text-white placeholder:text-on-surface-variant/50 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-primary/30"
+                          placeholder={t('clinicalNotes.form.instructionsPlaceholder')}
+                          value={item.instructions}
+                          onChange={(e) => updateMedication(index, 'instructions', e.target.value)}
+                        />
+                      </div>
+                      <button
+                        onClick={() => updateMedication(index, 'dispenseNow', !item.dispenseNow)}
+                        className={`shrink-0 h-8 px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                          item.dispenseNow
+                            ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                            : 'bg-surface-container dark:bg-slate-700 text-on-surface-variant dark:text-slate-400 hover:bg-primary/10 dark:hover:bg-blue-500/10 hover:text-primary dark:hover:text-blue-400'
+                        }`}
+                      >
+                        <PackageCheck className="w-3.5 h-3.5" />
+                        {item.dispenseNow ? t('clinicalNotes.form.dispensing') : t('clinicalNotes.form.dispenseNow')}
+                      </button>
+                    </div>
                   </div>
                 ))}
-                <button 
-                  onClick={addMedicationItem}
-                  className="flex items-center gap-2 text-primary dark:text-blue-400 text-sm font-semibold hover:opacity-80 transition-opacity"
-                >
-                  <span className="material-symbols-outlined text-lg">add_circle</span>
-                  {t('clinicalNotes.form.addItem')}
-                </button>
               </div>
               <textarea 
-                className="mt-2 w-full h-20 bg-transparent border-none text-on-surface dark:text-white placeholder:text-on-surface-variant/40 dark:placeholder:text-slate-600 focus:ring-0 resize-none text-sm" 
+                className="mt-2 w-full h-20 bg-surface-container dark:bg-slate-800/50 border border-outline-variant/10 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-on-surface dark:text-white placeholder:text-on-surface-variant/50 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-primary/30 resize-none transition-all" 
                 placeholder={t('clinicalNotes.form.followUpInstructionsPlaceholder')}
                 value={formData.plan}
                 onChange={(e) => handleChange('plan', e.target.value)}

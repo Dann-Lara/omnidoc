@@ -1,5 +1,21 @@
-import { IsString, IsOptional, IsNumber, Min, Max, IsEnum } from 'class-validator'
-import { Transform } from 'class-transformer'
+import { IsString, IsOptional, IsNumber, Min, Max, IsArray, ValidateNested, IsBoolean } from 'class-validator'
+import { Type } from 'class-transformer'
+
+export class PrescribedMedicationDto {
+  @IsString()
+  productId: string
+
+  @IsString()
+  productName: string
+
+  @IsNumber()
+  @Min(1)
+  quantity: number
+
+  @IsString()
+  @IsOptional()
+  instructions?: string
+}
 
 export class CreateNoteDto {
   @IsString()
@@ -70,4 +86,14 @@ export class CreateNoteDto {
 
   @IsOptional()
   isChronic?: boolean
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PrescribedMedicationDto)
+  @IsOptional()
+  prescribedMedications?: PrescribedMedicationDto[]
+
+  @IsBoolean()
+  @IsOptional()
+  dispenseNow?: boolean
 }

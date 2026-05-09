@@ -130,6 +130,41 @@ omnidoc/
 └── packages/                         # Paquetes compartidos (futuro)
 ```
 
+## Módulo de Farmacia e Inventario
+
+Sistema de inventario híbrido para gestión clínica de medicamentos:
+
+- **Catálogo Maestro** (`ProductLibrary`) — independiente de existencias físicas
+- **Gestión por Lotes** (`InventoryBatch`) — entradas incrementales con FEFO
+- **Despacho Clínico** — lógica FEFO con descuento secuencial entre lotes
+- **Dashboard Inteligente** — KPIs, stock de seguridad dinámico, vencimientos
+- **Control de Roles** — Owner/Collaborator con permisos granulares de farmacia
+- **Integración con Notas Clínicas** — prescripción, disponibilidad, despacho
+- **Moneda Configurable** — USD/MXN/EUR por organización
+
+### Páginas principales
+
+| Ruta | Descripción |
+|------|-------------|
+| `/[slug]/pharmacy` | Dashboard con KPIs y alertas |
+| `/[slug]/pharmacy/library` | Catálogo maestro de productos |
+| `/[slug]/pharmacy/products/new` | Crear nuevo producto |
+| `/[slug]/pharmacy/products/[id]/edit` | Editar producto |
+| `/[slug]/pharmacy/inventory` | Inventario por lotes con prioridad FEFO |
+| `/[slug]/pharmacy/restock` | Reabastecimiento de lotes |
+| `/[slug]/pharmacy/dispensing` | Historial de despachos |
+
+### API endpoints
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET/POST/PATCH | `/pharmacy/products` | CRUD de productos |
+| GET/POST | `/pharmacy/inventory` | Inventario y reabastecimiento |
+| POST | `/pharmacy/dispens` | Despacho con lógica FEFO |
+| GET | `/pharmacy/dispens/history` | Historial de despachos |
+| GET | `/pharmacy/batches/expiring` | Lotes por vencer |
+| GET | `/pharmacy/dashboard/*` | KPIs y stock de seguridad |
+
 ## Módulo de Especialidades
 
 El sistema de especialidades médicas permite:

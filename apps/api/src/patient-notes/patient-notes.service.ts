@@ -8,6 +8,7 @@ import { Logger } from '@nestjs/common'
 import PDFDocument from 'pdfkit'
 import { PrismaService } from '../database/prisma.service'
 import { MailService } from '../mail/mail.service'
+import { DispensingService } from '../pharmacy/dispensing/dispensing.service'
 import { CreateNoteDto } from './dto/create-note.dto'
 import { encrypt, decrypt, generateSignature } from '../lib/encryption'
 import { PatientAuditAction } from '../patients/types'
@@ -19,6 +20,7 @@ export class PatientNotesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
+    private readonly dispensingService: DispensingService,
   ) {}
 
   async findAll(organizationId: string | undefined, patientId: string) {
@@ -238,6 +240,10 @@ export class PatientNotesService {
         ? parseFloat((dto.weight / Math.pow(dto.height / 100, 2)).toFixed(1))
         : null
 
+    const planPayload = dto.prescribedMedications?.length
+      ? JSON.stringify({ text: dto.plan || '', medications: dto.prescribedMedications })
+      : dto.plan
+
     const note = await this.prisma.patientNote.create({
       data: {
         patientId,
@@ -254,7 +260,7 @@ export class PatientNotesService {
         bmi: bmi ? Number(bmi.toFixed(1)) : null,
         subjective: dto.subjective ? encrypt(dto.subjective) : null,
         diagnosis: dto.diagnosis ? encrypt(dto.diagnosis) : null,
-        plan: dto.plan ? encrypt(dto.plan) : null,
+        plan: planPayload ? encrypt(planPayload) : null,
         isSealed: false,
       },
       include: {
@@ -268,6 +274,24 @@ export class PatientNotesService {
       },
     })
 
+    if (dto.dispenseNow && dto.prescribedMedications?.length) {
+      try {
+        await this.dispensingService.dispense(
+          {
+            patientId,
+            noteId: note.id,
+            medications: dto.prescribedMedications.map((m) => ({
+              productId: m.productId,
+              quantity: m.quantity,
+            })),
+          },
+          { id: effectiveUserId, organizationId: effectiveOrgId },
+        )
+      } catch (err: any) {
+        this.logger.warn(`Dispense-on-create failed for note ${note.id}: ${err.message}`)
+      }
+    }
+
     await this.logAudit({
       patientId,
       userId: effectiveUserId,
@@ -276,10 +300,14 @@ export class PatientNotesService {
       newValue: { noteId: note.id },
     })
 
+    const planOut = dto.prescribedMedications?.length
+      ? planPayload
+      : dto.plan
+
     return {
       ...note,
       diagnosis: dto.diagnosis,
-      plan: dto.plan,
+      plan: planOut,
       subjective: dto.subjective,
     }
   }

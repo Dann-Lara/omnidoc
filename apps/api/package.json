@@ -19,7 +19,9 @@
     "db:migrate:prod": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "ts-node prisma/seed.ts"
+    "db:seed": "ts-node prisma/seed.ts",
+    "db:seed:stock": "ts-node prisma/seed-hospital-stock.ts",
+    "db:seed:dispensing": "ts-node prisma/seed-dispensing.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.0",
@@ -33,6 +35,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.7",
+    "date-fns": "^4.1.0",
     "express": "^5.2.1",
     "pdfkit": "^0.18.0",
     "reflect-metadata": "^0.2.2",

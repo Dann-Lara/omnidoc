@@ -7,7 +7,7 @@
 | [00-global](./00-global/README.md) | Arquitectura base, stack, config global | ✅ |
 | [01-auth](./01-auth/README.md) | Autenticación, login, signup, refactor de seguridad | 🔄 Parcial |
 | [02-admin](./02-admin/README.md) | Layout admin, sidebar, navbar, dashboard, profile, subscriptions | ✅ |
-| [03-tenant](./03-tenant/README.md) | Layout tenant con slug, sidebar, navbar, pages, subscriptions | ✅ |
+| [03-tenant](./03-tenant/README.md) | Layout tenant con slug, sidebar, navbar, pages, subscriptions, farmacia | ✅ |
 | [04-devops](./04-devops/README.md) | Docker, configuración de producción | ✅ |
 | [05-ai-core](./05-ai-core/README.md) | IA con fallback chain, Redis caching, multiple API keys | ⏳ Pendiente |
 | [06-profile](./06-profile/README.md) | Perfil de usuario, edición, auditorías | 🔄 Parcial |

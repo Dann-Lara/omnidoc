@@ -99,16 +99,14 @@ export class SettingsService {
 
   async updateOrgLang(orgIdOrSlug: string, lang: 'en' | 'es'): Promise<{ lang: 'en' | 'es' }> {
     try {
-      // Try to find by ID first, then by slug
       let organization = await this.prisma.organization.findUnique({
         where: { id: orgIdOrSlug },
-      });
+      })
 
-      // If not found by ID, try by slug
       if (!organization) {
         organization = await this.prisma.organization.findUnique({
           where: { slug: orgIdOrSlug },
-        });
+        })
       }
 
       if (!organization) {
@@ -131,6 +129,64 @@ export class SettingsService {
     } catch (error) {
       this.logger.error(`Error updating org lang: ${error}`);
       throw error;
+    }
+  }
+
+  async getOrgCurrency(orgIdOrSlug: string): Promise<{ currency: string }> {
+    try {
+      let organization = await this.prisma.organization.findUnique({
+        where: { id: orgIdOrSlug },
+        select: { settings: true },
+      })
+
+      if (!organization) {
+        organization = await this.prisma.organization.findUnique({
+          where: { slug: orgIdOrSlug },
+          select: { settings: true },
+        })
+      }
+
+      if (!organization) return { currency: 'USD' }
+
+      const settings = organization.settings as Record<string, unknown>
+      const currency = settings?.currency as string | undefined
+      return { currency: currency || 'USD' }
+    } catch (error) {
+      this.logger.error(`Error getting org currency: ${error}`)
+      return { currency: 'USD' }
+    }
+  }
+
+  async updateOrgCurrency(orgIdOrSlug: string, currency: string): Promise<{ currency: string }> {
+    try {
+      let organization = await this.prisma.organization.findUnique({
+        where: { id: orgIdOrSlug },
+      })
+
+      if (!organization) {
+        organization = await this.prisma.organization.findUnique({
+          where: { slug: orgIdOrSlug },
+        })
+      }
+
+      if (!organization) throw new Error('Organization not found')
+
+      const currentSettings = (organization.settings as Record<string, unknown>) || {}
+      await this.prisma.organization.update({
+        where: { id: organization.id },
+        data: {
+          settings: {
+            ...currentSettings,
+            currency,
+          },
+        },
+      })
+
+      this.logger.log(`Org ${orgIdOrSlug} currency updated to: ${currency}`)
+      return { currency }
+    } catch (error) {
+      this.logger.error(`Error updating org currency: ${error}`)
+      throw error
     }
   }
 }
