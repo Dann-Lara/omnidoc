@@ -103,6 +103,7 @@ apps/web/src/app/
 | 07 | [07-patients/README.md](./07-patients/README.md) | Pacientes y Expediente Clínico | ✅ |
 | 08 | [08-appointments/README.md](./08-appointments/README.md) | Citas médicas | ✅ Completado |
 | 09 | [09-pharmacy/README.md](./09-pharmacy/README.md) | Farmacia e Inventario (FEAT-PHARMA-001) | ⏳ Pendiente |
+| 10 | [10-workflows/README.md](./10-workflows/README.md) | Flujos clínicos (dispensación, signos vitales) | ✅ Dispensación implementada |
 
 ---
 
