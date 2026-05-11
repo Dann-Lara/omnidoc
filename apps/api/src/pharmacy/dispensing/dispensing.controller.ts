@@ -34,4 +34,12 @@ export class DispensingController {
     const organizationId = req.user.organizationId
     return this.dispensingService.getHistory(organizationId)
   }
+
+  @Get('pending')
+  @ApiOperation({ summary: 'Pending dispensing notes' })
+  @ApiResponse({ status: 200, description: 'List of notes with undispensed medications' })
+  async getPending(@Req() req: any) {
+    const organizationId = req.user.organizationId
+    return this.dispensingService.getPending(organizationId)
+  }
 }

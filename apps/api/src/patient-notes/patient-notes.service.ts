@@ -9,6 +9,7 @@ import PDFDocument from 'pdfkit'
 import { PrismaService } from '../database/prisma.service'
 import { MailService } from '../mail/mail.service'
 import { DispensingService } from '../pharmacy/dispensing/dispensing.service'
+import { NotificationsService } from '../notifications/notifications.service'
 import { CreateNoteDto } from './dto/create-note.dto'
 import { encrypt, decrypt, generateSignature } from '../lib/encryption'
 import { PatientAuditAction } from '../patients/types'
@@ -21,6 +22,7 @@ export class PatientNotesService {
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
     private readonly dispensingService: DispensingService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async findAll(organizationId: string | undefined, patientId: string) {
@@ -262,6 +264,7 @@ export class PatientNotesService {
         diagnosis: dto.diagnosis ? encrypt(dto.diagnosis) : null,
         plan: planPayload ? encrypt(planPayload) : null,
         isSealed: false,
+        medicationDispensed: dto.dispenseNow === true,
       },
       include: {
         doctor: {
@@ -273,24 +276,6 @@ export class PatientNotesService {
         },
       },
     })
-
-    if (dto.dispenseNow && dto.prescribedMedications?.length) {
-      try {
-        await this.dispensingService.dispense(
-          {
-            patientId,
-            noteId: note.id,
-            medications: dto.prescribedMedications.map((m) => ({
-              productId: m.productId,
-              quantity: m.quantity,
-            })),
-          },
-          { id: effectiveUserId, organizationId: effectiveOrgId },
-        )
-      } catch (err: any) {
-        this.logger.warn(`Dispense-on-create failed for note ${note.id}: ${err.message}`)
-      }
-    }
 
     await this.logAudit({
       patientId,
@@ -358,6 +343,47 @@ export class PatientNotesService {
       action: PatientAuditAction.SEALED,
       newValue: { noteId: note.id, signature },
     })
+
+    if (note.plan) {
+      try {
+        const decrypted = decrypt(note.plan)
+        const parsed = JSON.parse(decrypted)
+        if (parsed?.medications?.length > 0) {
+          if (note.medicationDispensed) {
+            await this.dispensingService.dispense(
+              {
+                patientId,
+                noteId: note.id,
+                medications: parsed.medications.map((m: any) => ({
+                  productId: m.productId,
+                  quantity: m.quantity,
+                })),
+              },
+              { id: userId, organizationId },
+              false,
+            )
+          } else {
+            const patientRec = await this.prisma.patient.findUnique({
+              where: { id: patientId },
+              select: { firstName: true, lastName: true },
+            })
+            const medSummary = parsed.medications
+              .map((m: any) => m.productName || m.productId)
+              .join(', ')
+            await this.notificationsService.create({
+              organizationId,
+              targetPermission: 'pharmacy:dispense',
+              type: 'dispensing_pending',
+              title: 'Dispensación pendiente',
+              message: `${patientRec?.firstName || ''} ${patientRec?.lastName || ''} — ${medSummary}`,
+              noteId: note.id,
+            })
+          }
+        }
+      } catch (err) {
+        this.logger.warn(`[seal] Failed to process medications for note ${noteId}: ${err instanceof Error ? err.message : err}`)
+      }
+    }
 
     return updatedNote
   }

@@ -2,6 +2,7 @@ import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { PrismaService } from '../database/prisma.service';
+import { flattenRolePermissions } from '../lib/permissions';
 
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
@@ -55,7 +56,14 @@ export class SupabaseAuthGuard implements CanActivate {
       // Find user in our DB by supabaseId to get internal ID
       const dbUser = await this.prisma.user.findUnique({
         where: { supabaseId: user.id },
-        select: { id: true, organizationId: true },
+        select: {
+          id: true,
+          organizationId: true,
+          permissions: true,
+          role: {
+            select: { permissions: true },
+          },
+        },
       });
 
       let internalUserId = dbUser?.id;
@@ -100,6 +108,13 @@ export class SupabaseAuthGuard implements CanActivate {
         throw new UnauthorizedException('User not found in database');
       }
       
+      let permissions: Record<string, boolean> | null = null
+      if (dbUser?.permissions && typeof dbUser.permissions === 'object') {
+        permissions = dbUser.permissions as Record<string, boolean>
+      } else if (dbUser?.role?.permissions) {
+        permissions = flattenRolePermissions(dbUser.role.permissions as string[])
+      }
+
       (request as Request & { 
         user?: { 
           id: string; 
@@ -107,6 +122,7 @@ export class SupabaseAuthGuard implements CanActivate {
           organizationId?: string;
           organizationSlug?: string;
           role?: string;
+          permissions?: Record<string, boolean>;
         } 
       }).user = {
         id: internalUserId,
@@ -114,6 +130,7 @@ export class SupabaseAuthGuard implements CanActivate {
         organizationId: internalOrgId,
         organizationSlug,
         role: userMetadata.role || appMetadata.role,
+        permissions: permissions ?? undefined,
       };
 
       return true;

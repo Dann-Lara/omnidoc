@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
 import { TagSelector } from '@/components/TagSelector'
+import { PERMISSION_MODULES } from '@/lib/permissions/modules'
 import {
   Loader2,
   ArrowLeft,
@@ -19,6 +20,8 @@ import {
 } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+
+const ALL_ACTIONS = [...new Set(PERMISSION_MODULES.flatMap(m => m.actions))]
 
 interface TeamMember {
   id: string
@@ -39,12 +42,6 @@ interface TeamMember {
     name: string
   }
 }
-
-const PERMISSIONS = [
-  { key: 'appointments', name: 'Citas', nameEn: 'Appointments', read: true, write: true, delete: false },
-  { key: 'patients', name: 'Pacientes', nameEn: 'Patients', read: true, write: true, delete: false },
-  { key: 'clinicalHistory', name: 'Historial Clínico', nameEn: 'Clinical History', read: true, write: false, delete: false },
-]
 
 export default function TeamMemberPage() {
   const { lang, t } = useI18n()
@@ -84,6 +81,16 @@ export default function TeamMemberPage() {
     fetchPendingInvitations()
   }, [userId])
 
+  const migratePermissions = (perms: Record<string, any>): Record<string, any> => {
+    if (!perms || typeof perms !== 'object') return {}
+    const migrated = { ...perms }
+    if (migrated.clinicalHistory) {
+      migrated.clinical_history = migrated.clinicalHistory
+      delete migrated.clinicalHistory
+    }
+    return migrated
+  }
+
   const fetchMember = async () => {
     try {
       const res = await fetch(`${API_URL}/team/${userId}`, {
@@ -92,7 +99,7 @@ export default function TeamMemberPage() {
       if (res.ok) {
         const data = await res.json()
         setMember(data)
-        setLocalPermissions(data.permissions || {})
+        setLocalPermissions(migratePermissions(data.permissions || {}))
         setLocalSubtype(data.subtype || '')
         setLocalSpecialtyIds(data.specialtyIds || [])
       }
@@ -430,43 +437,34 @@ export default function TeamMemberPage() {
                   <thead>
                     <tr className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
                       <th className="pb-4 pl-4">{t('userTypes.module')}</th>
-                      <th className="pb-4 text-center">{t('userTypes.read')}</th>
-                      <th className="pb-4 text-center">{t('userTypes.write')}</th>
-                      <th className="pb-4 text-center">{t('userTypes.delete')}</th>
+                      {ALL_ACTIONS.map(action => (
+                        <th key={action} className="pb-4 text-center capitalize">{action}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="text-sm">
-                    {PERMISSIONS.map((perm) => (
-                      <tr key={perm.key} className="bg-surface-container-low dark:bg-slate-700 group hover:bg-surface-container dark:hover:bg-slate-600 transition-colors">
-                        <td className="py-4 pl-4 font-semibold dark:text-white rounded-l-lg">
-                          {perm.key === 'appointments' ? t('team.permAppointments') : perm.key === 'patients' ? t('team.permPatients') : t('team.permClinicalHistory')}
-                        </td>
-                        <td className="py-4 text-center">
-                          <input
-                            checked={(localPermissions as any)[perm.key]?.read ?? perm.read}
-                            onChange={(e) => updatePermission(perm.key, 'read', e.target.checked)}
-                            className="w-5 h-5 rounded text-primary focus:ring-primary/20 border-outline-variant/30 bg-white dark:bg-slate-800"
-                            type="checkbox"
-                          />
-                        </td>
-                        <td className="py-4 text-center">
-                          <input
-                            checked={(localPermissions as any)[perm.key]?.write ?? perm.write}
-                            onChange={(e) => updatePermission(perm.key, 'write', e.target.checked)}
-                            className="w-5 h-5 rounded text-primary focus:ring-primary/20 border-outline-variant/30 bg-white dark:bg-slate-800"
-                            type="checkbox"
-                          />
-                        </td>
-                        <td className="py-4 text-center rounded-r-lg">
-                          <input
-                            checked={(localPermissions as any)[perm.key]?.delete ?? perm.delete}
-                            onChange={(e) => updatePermission(perm.key, 'delete', e.target.checked)}
-                            className="w-5 h-5 rounded text-primary focus:ring-primary/20 border-outline-variant/30 bg-white dark:bg-slate-800"
-                            type="checkbox"
-                          />
-                        </td>
-                      </tr>
-                    ))}
+                    {PERMISSION_MODULES.map((mod) => {
+                      const modPerms = (localPermissions as any)[mod.key]
+                      return (
+                        <tr key={mod.key} className="bg-surface-container-low dark:bg-slate-700 group hover:bg-surface-container dark:hover:bg-slate-600 transition-colors">
+                          <td className="py-4 pl-4 font-semibold dark:text-white rounded-l-lg whitespace-nowrap">
+                            {lang === 'en' ? mod.labelEn : mod.label}
+                          </td>
+                          {ALL_ACTIONS.map(action => (
+                            <td key={action} className="py-4 text-center">
+                              {mod.actions.includes(action) && (
+                                <input
+                                  checked={modPerms?.[action] ?? false}
+                                  onChange={(e) => updatePermission(mod.key, action, e.target.checked)}
+                                  className="w-5 h-5 rounded text-primary focus:ring-primary/20 border-outline-variant/30 bg-white dark:bg-slate-800"
+                                  type="checkbox"
+                                />
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

@@ -4,7 +4,9 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useI18n } from '@/lib/i18n'
 import { useParams, useRouter } from 'next/navigation'
-import { CheckCircle, AlertTriangle, Plus, Sparkles, Map, DoorOpen, ChevronLeft, ChevronRight, Pencil, FileText, XCircle, Loader2, Clock, User, Stethoscope, X, EllipsisVertical } from 'lucide-react'
+import { CheckCircle, AlertTriangle, Plus, Sparkles, Map, DoorOpen, ChevronLeft, ChevronRight, Pencil, FileText, XCircle, Loader2, Clock, User, Stethoscope, X, EllipsisVertical, Heart } from 'lucide-react'
+import { VitalsModal } from '@/components/vitals/VitalsModal'
+import { usePermissions } from '@/lib/permissions/usePermissions'
 
 interface Appointment {
   id: string
@@ -60,6 +62,8 @@ export function AgendaView({ appointments, timeView, selectedDate, onDateChange,
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null)
+  const [showVitalsModal, setShowVitalsModal] = useState(false)
+  const { can } = usePermissions()
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -277,6 +281,15 @@ export function AgendaView({ appointments, timeView, selectedDate, onDateChange,
           </div>
           <div className="px-6 pb-6">
             <div className="flex flex-wrap gap-2 mb-3">
+              {appt.status === 'CONFIRMED' && (
+                <button
+                  onClick={() => setShowVitalsModal(true)}
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-br from-primary to-primary-container text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all"
+                >
+                  <Heart className="w-4 h-4" />
+                  Tomar Signos Vitales
+                </button>
+              )}
               {appt.status === 'SCHEDULED' && (
                 <button
                   onClick={() => handleStatusChange(appt.id, 'CONFIRMED')}
@@ -307,7 +320,7 @@ export function AgendaView({ appointments, timeView, selectedDate, onDateChange,
                 {t('appointments.agenda.edit')}
               </button>
               <button
-                onClick={() => { router.push(`/${slug}/operations/patients/${appt.patient.id}/notes/new?userId=${appt.userId || appt.user.id}&specialtyId=${appt.specialtyId || ''}`); setSelectedAppt(null) }}
+                onClick={() => { router.push(`/${slug}/operations/patients/${appt.patient.id}/notes/new?appointmentId=${appt.id}&userId=${appt.userId || appt.user.id}&specialtyId=${appt.specialtyId || ''}`); setSelectedAppt(null) }}
                 className="flex-1 px-4 py-2.5 bg-primary/10 text-primary rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-primary/20 transition-colors"
               >
                 <FileText className="w-4 h-4" />
@@ -598,6 +611,18 @@ export function AgendaView({ appointments, timeView, selectedDate, onDateChange,
       {timeView === 'month' && renderMonthView()}
 
       <AppointmentModal />
+      {showVitalsModal && selectedAppt && (
+        <VitalsModal
+          appointmentId={selectedAppt.id}
+          patientName={`${selectedAppt.patient.firstName} ${selectedAppt.patient.lastName}`}
+          onClose={() => setShowVitalsModal(false)}
+          onSaved={() => {
+            if (onStatusChange) {
+              onStatusChange(selectedAppt.id, 'IN_PROGRESS')
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

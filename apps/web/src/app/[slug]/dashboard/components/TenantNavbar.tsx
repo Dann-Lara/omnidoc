@@ -6,9 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useI18n } from '@/lib/i18n'
 import { useAuth, clearAuthSession, getStoredOrgSlug } from '@/lib/auth'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import {
   Search,
-  Bell,
   HelpCircle,
   Sun,
   Moon,
@@ -146,18 +146,7 @@ export function TenantNavbar({ onMenuClick, isSidebarOpen, sidebarCollapsed = fa
 
         <ThemeToggle />
 
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="p-2 rounded-lg hover:bg-surface-container dark:hover:bg-slate-800 transition-colors relative text-on-surface-variant"
-        >
-          <Bell className="w-5 h-5" />
-          <motion.span
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"
-          />
-        </motion.button>
+        <NotificationDropdown />
 
         <motion.button
           whileHover={{ scale: 1.05 }}

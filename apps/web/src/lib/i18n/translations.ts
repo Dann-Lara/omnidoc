@@ -20,6 +20,7 @@ export const translations = {
     showing: { en: 'Showing', es: 'Mostrando' },
     of: { en: 'of', es: 'de' },
     members: { en: 'members', es: 'profesionales' },
+    justNow: { en: 'Just now', es: 'Ahora' },
     yesterday: { en: 'Yesterday', es: 'Ayer' },
     minutesAgo: { en: '{min} min ago', es: 'Hace {min} min' },
     hoursAgo: { en: '{hours}h ago', es: 'Hace {hours}h' },
@@ -71,6 +72,27 @@ export const translations = {
       showSpanish: { en: 'ES', es: 'EN' },
       showEnglish: { en: 'EN', es: 'ES' },
     },
+  },
+  vitals: {
+    title: { en: 'Vital Signs', es: 'Signos Vitales' },
+    bloodPressure: { en: 'Blood Pressure', es: 'Presión Arterial' },
+    systolic: { en: 'Systolic', es: 'Sistólica' },
+    diastolic: { en: 'Diastolic', es: 'Diastólica' },
+    heartRate: { en: 'Heart Rate', es: 'Frec. Cardíaca' },
+    temperature: { en: 'Temperature', es: 'Temperatura' },
+    respiratoryRate: { en: 'Respiratory Rate', es: 'Frec. Respiratoria' },
+    oxygenSat: { en: 'O2 Sat', es: 'Sat. O2' },
+    weight: { en: 'Weight', es: 'Peso' },
+    height: { en: 'Height', es: 'Talla' },
+    subjective: { en: 'Subjective', es: 'Subjetivo' },
+    subjectivePlaceholder: { en: 'How does the patient feel?', es: '¿Cómo se siente el paciente?' },
+    bmi: { en: 'BMI', es: 'IMC' },
+    bmiUnderweight: { en: 'Underweight', es: 'Bajo peso' },
+    bmiNormal: { en: 'Normal', es: 'Normal' },
+    bmiOverweight: { en: 'Overweight', es: 'Sobrepeso' },
+    bmiObese: { en: 'Obese', es: 'Obesidad' },
+    saveAndWait: { en: 'Save & Mark In Progress', es: 'Guardar y Marcar En Espera' },
+    cancel: { en: 'Cancel', es: 'Cancelar' },
   },
   auth: {
     backToHome: { en: 'Back to home', es: 'Volver al inicio' },
@@ -1174,7 +1196,7 @@ specialties: {
       confirmed: { en: 'Confirmed', es: 'Confirmada' },
       pending: { en: 'Pending', es: 'Pendiente' },
       cancelled: { en: 'Cancelled', es: 'Cancelada' },
-      inProgress: { en: 'In Progress', es: 'En Progreso' },
+      inProgress: { en: 'Waiting', es: 'En Espera' },
       noShow: { en: 'No Show', es: 'No Asistió' },
       completed: { en: 'Completed', es: 'Completada' },
       scheduled: { en: 'Scheduled', es: 'Programada' },
@@ -1226,7 +1248,7 @@ specialties: {
         mode: { en: 'Mode', es: 'Modalidad' },
       },
       scheduled: { en: 'Scheduled', es: 'Programada' },
-      inProgress: { en: 'In Progress', es: 'En Progreso' },
+      inProgress: { en: 'Waiting', es: 'En Espera' },
       completed: { en: 'Completed', es: 'Completada' },
       cancelled: { en: 'Cancelled', es: 'Cancelada' },
       noShow: { en: 'No Show', es: 'No Asistió' },
@@ -1418,8 +1440,8 @@ specialties: {
       quantity: { en: 'Qty', es: 'Cant' },
       instructions: { en: 'Instructions', es: 'Instrucciones' },
       instructionsPlaceholder: { en: 'e.g. 1 each 8h', es: 'ej. 1 cada 8h' },
-      dispenseNow: { en: 'Dispense', es: 'Despachar' },
-      dispensing: { en: 'To dispense', es: 'Por despachar' },
+      dispenseNow: { en: 'Dispense now', es: 'Dispensar ahora' },
+      dispensing: { en: 'Pending', es: 'Por despachar' },
     },
     view: {
       noteNotFound: { en: 'Note not found', es: 'Nota no encontrada' },
@@ -1475,6 +1497,26 @@ specialties: {
       medication: { en: 'Medication', es: 'Medicamento' },
       qty: { en: 'Qty', es: 'Cant' },
       instructions: { en: 'Instructions', es: 'Instrucciones' },
+      pendingPharmacyDispatch: { en: 'Pending pharmacy dispatch', es: 'Pendiente de despacho por farmacia' },
+    },
+  },
+  notifications: {
+    title: { en: 'Notifications', es: 'Notificaciones' },
+    markAllRead: { en: 'Mark all as read', es: 'Marcar todo leído' },
+    empty: { en: 'No notifications', es: 'Sin notificaciones' },
+    viewAll: { en: 'View all pending', es: 'Ver todos los pendientes' },
+  },
+  dispensing: {
+    pending: {
+      title: { en: 'Pending Dispensing', es: 'Despachos Pendientes' },
+      count: { en: 'pending', es: 'pendientes' },
+      empty: { en: 'All medications have been dispensed', es: 'Todos los medicamentos han sido despachados' },
+      patient: { en: 'Patient', es: 'Paciente' },
+      doctor: { en: 'Doctor', es: 'Médico' },
+      date: { en: 'Date', es: 'Fecha' },
+      action: { en: 'Action', es: 'Acción' },
+      dispense: { en: 'Dispense', es: 'Despachar' },
+      dispensing: { en: 'Dispensing...', es: 'Despachando...' },
     },
   },
 } as const
@@ -1486,7 +1528,6 @@ export function t(path: string, lang: Lang): string {
   const keys = path.split('.')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let result: any = translations
-  
   for (const key of keys) {
     if (result && typeof result === 'object' && key in result) {
       result = result[key]
@@ -1494,10 +1535,8 @@ export function t(path: string, lang: Lang): string {
       return path
     }
   }
-  
   if (result && typeof result === 'object' && lang in result) {
     return String(result[lang])
   }
-  
   return path
 }

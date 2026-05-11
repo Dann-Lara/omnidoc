@@ -39,6 +39,7 @@ export interface UserInfo {
   last_name: string | null;
   avatar: string | null;
   subtype: string | null;
+  permissions?: Record<string, boolean>;
 }
 
 export interface OrganizationInfo {

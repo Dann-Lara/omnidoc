@@ -8,66 +8,70 @@ datasource db {
 }
 
 model Organization {
-  id                 String             @id @default(uuid())
-  name               String
-  slug               String             @unique
-  type               OrganizationType
-  planId             String?
-  features           Json               @default("{}")
-  branding           Json               @default("{}")
-  settings           Json               @default("{}")
-  subscriptionStatus SubscriptionStatus @default(TRIALING)
-  specialtyIds       String[]
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-  appointments       Appointment[]
-  auditLogs          AuditLog[]
-  invitations        Invitation[]
-  operatorTenants    OperatorTenant[]
-  patients           Patient[]
-  patientAuditLogs   PatientAuditLog[]
-  patientNotes       PatientNote[]
-  roles              Role[]
-  subscription       Subscription?
-  teamInvitations    TeamInvitation[]
-  tenantSpecialties  TenantSpecialty[]
-  users              User[]
-  inventoryBatches  InventoryBatch[]
-  inventoryLogs     InventoryLog[]
+  id                   String                @id @default(uuid())
+  name                 String
+  slug                 String                @unique
+  type                 OrganizationType
+  planId               String?
+  features             Json                  @default("{}")
+  branding             Json                  @default("{}")
+  settings             Json                  @default("{}")
+  subscriptionStatus   SubscriptionStatus    @default(TRIALING)
+  specialtyIds         String[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  appointments         Appointment[]
+  auditLogs            AuditLog[]
+  invitations          Invitation[]
+  operatorTenants      OperatorTenant[]
+  patients             Patient[]
+  patientAuditLogs     PatientAuditLog[]
+  patientNotes         PatientNote[]
+  roles                Role[]
+  subscription         Subscription?
+  teamInvitations      TeamInvitation[]
+  tenantSpecialties    TenantSpecialty[]
+  users                User[]
+  inventoryBatches     InventoryBatch[]
+  inventoryLogs        InventoryLog[]
   dispensedMedications DispensedMedication[]
+  appointmentVitals    AppointmentVitals[]
+  notifications        Notification[]
 
   @@index([slug])
   @@index([subscriptionStatus])
 }
 
 model User {
-  id                String            @id @default(uuid())
-  supabaseId        String            @unique
+  id                String              @id @default(uuid())
+  supabaseId        String              @unique
   organizationId    String
   roleId            String
   email             String
   firstName         String
   lastName          String
   specialty         String?
-  isTenantAdmin     Boolean           @default(false)
+  isTenantAdmin     Boolean             @default(false)
   apiKey            String?
-  settings          Json              @default("{}")
-  specialtyIds      String[]          @default([])
+  settings          Json                @default("{}")
+  specialtyIds      String[]            @default([])
   permissions       Json?
   userType          String?
-  status            UserStatus        @default(ACTIVE)
+  status            UserStatus          @default(ACTIVE)
   lastLoginAt       DateTime?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   subtype           String?
   avatar            String?
-  appointments      Appointment[]     @relation("UserAppointments")
-  tenantAssignments OperatorTenant[]  @relation("OperatorTenants")
+  appointments      Appointment[]       @relation("UserAppointments")
+  tenantAssignments OperatorTenant[]    @relation("OperatorTenants")
   patientAuditLogs  PatientAuditLog[]
   patientNotes      PatientNote[]
-  teamInvitations   TeamInvitation[]  @relation("InvitedByUser")
-  organization      Organization      @relation(fields: [organizationId], references: [id])
-  role              Role              @relation(fields: [roleId], references: [id])
+  teamInvitations   TeamInvitation[]    @relation("InvitedByUser")
+  organization      Organization        @relation(fields: [organizationId], references: [id])
+  role              Role                @relation(fields: [roleId], references: [id])
+  appointmentVitals AppointmentVitals[]
+  notifications     Notification[]
 
   @@index([organizationId])
   @@index([supabaseId])
@@ -122,26 +126,27 @@ model Plan {
 }
 
 model Appointment {
-  id             String            @id @default(uuid())
-  organizationId String
-  patientId      String
-  scheduledAt    DateTime
-  duration       Int
-  status         AppointmentStatus @default(SCHEDULED)
-  type           String
-  notes          String?
-  aiPredictions  Json?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  userId         String
-  specialtyId    String?
-  mode           AppointmentMode?  @default(IN_PERSON)
-  room           String?
-  reason         String?
-  organization   Organization      @relation(fields: [organizationId], references: [id])
-  patient        Patient           @relation(fields: [patientId], references: [id])
-  specialty      Specialty?        @relation(fields: [specialtyId], references: [id])
-  user           User              @relation("UserAppointments", fields: [userId], references: [id])
+  id                String             @id @default(uuid())
+  organizationId    String
+  patientId         String
+  scheduledAt       DateTime
+  duration          Int
+  status            AppointmentStatus  @default(SCHEDULED)
+  type              String
+  notes             String?
+  aiPredictions     Json?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  userId            String
+  specialtyId       String?
+  mode              AppointmentMode?   @default(IN_PERSON)
+  room              String?
+  reason            String?
+  organization      Organization       @relation(fields: [organizationId], references: [id])
+  patient           Patient            @relation(fields: [patientId], references: [id])
+  specialty         Specialty?         @relation(fields: [specialtyId], references: [id])
+  user              User               @relation("UserAppointments", fields: [userId], references: [id])
+  appointmentVitals AppointmentVitals?
 
   @@index([organizationId])
   @@index([userId])
@@ -294,32 +299,32 @@ model OperatorTenant {
 }
 
 model PatientNote {
-  id             String       @id @default(dbgenerated("gen_random_uuid()"))
-  patientId      String
-  doctorId       String
-  organizationId String
-  specialtyId    String?
-  bloodPressure  String?
-  heartRate      Int?
-  temperature    Decimal?     @db.Decimal(4, 1)
-  respRate       Int?
-  oxygenSat      Int?
-  weight         Decimal?     @db.Decimal(5, 2)
-  height         Decimal?     @db.Decimal(5, 2)
-  bmi            Decimal?     @db.Decimal(4, 2)
-  subjective     String?
-  diagnosis      String?
-  plan           String?
-  isSealed       Boolean      @default(false)
-  sealedAt       DateTime?
-  signature      String?
-  medicationDispensed Boolean      @default(false)
+  id                   String                @id @default(dbgenerated("gen_random_uuid()"))
+  patientId            String
+  doctorId             String
+  organizationId       String
+  specialtyId          String?
+  bloodPressure        String?
+  heartRate            Int?
+  temperature          Decimal?              @db.Decimal(4, 1)
+  respRate             Int?
+  oxygenSat            Int?
+  weight               Decimal?              @db.Decimal(5, 2)
+  height               Decimal?              @db.Decimal(5, 2)
+  bmi                  Decimal?              @db.Decimal(4, 2)
+  subjective           String?
+  diagnosis            String?
+  plan                 String?
+  isSealed             Boolean               @default(false)
+  sealedAt             DateTime?
+  signature            String?
+  medicationDispensed  Boolean               @default(false)
   dispensedMedications DispensedMedication[]
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  doctor         User         @relation(fields: [doctorId], references: [id])
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  patient        Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  doctor               User                  @relation(fields: [doctorId], references: [id])
+  organization         Organization          @relation(fields: [organizationId], references: [id])
+  patient              Patient               @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@index([patientId])
   @@index([doctorId])
@@ -430,17 +435,17 @@ enum LogType {
 // --- PHARMACY MODULE (FEAT-PHARMA-001) ---
 
 model ProductLibrary {
-  id                String   @id @default(cuid())
-  commercialName    String
-  activeSubstance   String
-  presentation      String   // Dosis/Unidad
-  laboratory        String
-  barcode           String?  @unique
-  unitsPerBox       Int      @default(1)
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  inventoryBatches    InventoryBatch[]
+  id                   String                @id @default(cuid())
+  commercialName       String
+  activeSubstance      String
+  presentation         String // Dosis/Unidad
+  laboratory           String
+  barcode              String?               @unique
+  unitsPerBox          Int                   @default(1)
+  isActive             Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  inventoryBatches     InventoryBatch[]
   dispensedMedications DispensedMedication[]
 
   @@index([commercialName])
@@ -451,18 +456,18 @@ model ProductLibrary {
 }
 
 model InventoryBatch {
-  id                String   @id @default(cuid())
-  tenantId          String
-  productId         String
-  batchNumber       String?
-  quantity          Int
-  costPerBox        Decimal? @db.Decimal(10, 2)
-  expiryDate        DateTime
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  organization      Organization @relation(fields: [tenantId], references: [id])
-  product           ProductLibrary @relation(fields: [productId], references: [id])
-  inventoryLogs     InventoryLog[]
+  id                   String                @id @default(cuid())
+  tenantId             String
+  productId            String
+  batchNumber          String?
+  quantity             Int
+  costPerBox           Decimal?              @db.Decimal(10, 2)
+  expiryDate           DateTime
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  organization         Organization          @relation(fields: [tenantId], references: [id])
+  product              ProductLibrary        @relation(fields: [productId], references: [id])
+  inventoryLogs        InventoryLog[]
   dispensedMedications DispensedMedication[]
 
   @@index([tenantId])
@@ -472,17 +477,17 @@ model InventoryBatch {
 }
 
 model InventoryLog {
-  id                String   @id @default(cuid())
-  tenantId          String
-  batchId           String
-  patientId         String?
-  doctorId          String
-  quantity          Int
-  type              LogType  @default(RESTOCKED)
-  reason            String?  // Justificación para ajustes manuales
-  createdAt         DateTime @default(now())
-  organization      Organization @relation(fields: [tenantId], references: [id])
-  batch             InventoryBatch @relation(fields: [batchId], references: [id])
+  id           String         @id @default(cuid())
+  tenantId     String
+  batchId      String
+  patientId    String?
+  doctorId     String
+  quantity     Int
+  type         LogType        @default(RESTOCKED)
+  reason       String? // Justificación para ajustes manuales
+  createdAt    DateTime       @default(now())
+  organization Organization   @relation(fields: [tenantId], references: [id])
+  batch        InventoryBatch @relation(fields: [batchId], references: [id])
 
   @@index([tenantId])
   @@index([batchId])
@@ -492,22 +497,64 @@ model InventoryLog {
   @@index([type])
 }
 
+model AppointmentVitals {
+  id             String       @id @default(uuid())
+  appointmentId  String       @unique
+  organizationId String
+  takenById      String
+  bloodPressure  String?
+  heartRate      Int?
+  temperature    Decimal?     @db.Decimal(4, 1)
+  respRate       Int?
+  oxygenSat      Int?
+  weight         Decimal?     @db.Decimal(5, 2)
+  height         Decimal?     @db.Decimal(5, 2)
+  bmi            Decimal?     @db.Decimal(4, 2)
+  subjective     String?
+  createdAt      DateTime     @default(now())
+  appointment    Appointment  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  takenBy        User         @relation(fields: [takenById], references: [id])
+
+  @@index([organizationId])
+  @@index([appointmentId])
+}
+
 model DispensedMedication {
-  id                String   @id @default(cuid())
-  tenantId          String
-  noteId            String
-  batchId           String
-  productId         String
-  quantity          Int
-  dispensedBy       String
-  createdAt         DateTime @default(now())
-  organization      Organization @relation(fields: [tenantId], references: [id])
-  note              PatientNote @relation(fields: [noteId], references: [id])
-  batch             InventoryBatch @relation(fields: [batchId], references: [id])
-  product           ProductLibrary @relation(fields: [productId], references: [id])
+  id           String         @id @default(cuid())
+  tenantId     String
+  noteId       String
+  batchId      String
+  productId    String
+  quantity     Int
+  dispensedBy  String
+  createdAt    DateTime       @default(now())
+  organization Organization   @relation(fields: [tenantId], references: [id])
+  note         PatientNote    @relation(fields: [noteId], references: [id])
+  batch        InventoryBatch @relation(fields: [batchId], references: [id])
+  product      ProductLibrary @relation(fields: [productId], references: [id])
 
   @@index([tenantId])
   @@index([noteId])
   @@index([batchId])
   @@index([productId])
+}
+
+model Notification {
+  id               String       @id @default(uuid())
+  organizationId   String
+  userId           String?
+  targetPermission String?
+  type             String // "dispensing_pending"
+  title            String
+  message          String?
+  noteId           String?
+  isRead           Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  organization     Organization @relation(fields: [organizationId], references: [id])
+  user             User?        @relation(fields: [userId], references: [id])
+
+  @@index([organizationId, userId])
+  @@index([organizationId, targetPermission])
+  @@index([organizationId, isRead])
 }

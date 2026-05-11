@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Activity, FileDown, Send, CheckCircle, Loader, Pill, PackageCheck } from 'lucide-react'
+import { ArrowLeft, Activity, FileDown, Send, CheckCircle, Loader, Pill, PackageCheck, Info } from 'lucide-react'
+import { usePermissions } from '@/lib/permissions/usePermissions'
 import { pdf } from '@react-pdf/renderer'
 import { ClinicalNotePDF } from '@/components/pdf/ClinicalNotePDF'
 import { Modal } from '@/components/Modal'
@@ -105,6 +106,7 @@ export default function NoteDetailPage() {
   const params = useParams()
   const router = useRouter()
   const slug = params.slug as string
+  const { can } = usePermissions()
   const patientId = params.patientId as string
   const noteId = params.noteId as string
 
@@ -481,7 +483,7 @@ export default function NoteDetailPage() {
                         </tbody>
                       </table>
                     </div>
-                    {!note.medicationDispensed && (
+                    {note.isSealed && !note.medicationDispensed && can('pharmacy', 'dispense') && (
                       <div className="mt-4">
                         <button
                           onClick={handleDispense}
@@ -501,6 +503,12 @@ export default function NoteDetailPage() {
                                 ? t('clinicalNotes.view.dispensedFailed')
                                 : t('clinicalNotes.view.dispenseButton')}
                         </button>
+                      </div>
+                    )}
+                    {!note.medicationDispensed && !can('pharmacy', 'dispense') && (
+                      <div className="mt-4 flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-xl text-sm">
+                        <Info className="w-4 h-4 shrink-0" />
+                        {t('clinicalNotes.view.pendingPharmacyDispatch')}
                       </div>
                     )}
                   </div>

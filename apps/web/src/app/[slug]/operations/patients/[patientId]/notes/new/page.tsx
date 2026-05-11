@@ -190,6 +190,7 @@ export default function NewNotePage() {
 
   const prefillUserId = searchParams.get('userId') || ''
   const prefillSpecialtyId = searchParams.get('specialtyId') || ''
+  const prefillAppointmentId = searchParams.get('appointmentId') || ''
 
   const [formData, setFormData] = useState<NoteFormData>({
     bloodPressure: '',
@@ -212,6 +213,7 @@ export default function NewNotePage() {
     fetchSpecialties()
     fetchDoctors()
     fetchInventory()
+    if (prefillAppointmentId) fetchVitals()
 
     const handleClickOutside = (e: MouseEvent) => {
       if (productSearchRef.current && !productSearchRef.current.contains(e.target as Node)) {
@@ -221,6 +223,34 @@ export default function NewNotePage() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [patientId])
+
+  const fetchVitals = async () => {
+    try {
+      const res = await fetch(`${API_URL}/appointments/${prefillAppointmentId}/vitals`, {
+        credentials: 'include',
+      })
+      if (res.ok && res.status !== 204) {
+        const text = await res.text()
+        if (!text) return
+        const data = JSON.parse(text)
+        if (data) {
+          setFormData(prev => ({
+            ...prev,
+            bloodPressure: data.bloodPressure || '',
+            heartRate: data.heartRate ? String(data.heartRate) : '',
+            temperature: data.temperature ? String(data.temperature) : '',
+            respRate: data.respRate ? String(data.respRate) : '',
+            oxygenSat: data.oxygenSat ? String(data.oxygenSat) : '',
+            weight: data.weight ? String(data.weight) : '',
+            height: data.height ? String(data.height) : '',
+            subjective: data.subjective || '',
+          }))
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch vitals:', err)
+    }
+  }
 
   const fetchPatient = async () => {
     try {
@@ -342,7 +372,7 @@ export default function NewNotePage() {
           quantity: m.quantity,
           instructions: m.instructions || undefined,
         })),
-        dispenseNow: medicationItems.some((m) => m.dispenseNow) || undefined,
+        dispenseNow: medicationItems.every((m) => m.dispenseNow) || undefined,
       }
 
       const res = await fetch(`${API_URL}/patients/${patientId}/notes`, {
@@ -389,7 +419,7 @@ export default function NewNotePage() {
           quantity: m.quantity,
           instructions: m.instructions || undefined,
         })),
-        dispenseNow: medicationItems.some((m) => m.dispenseNow) || undefined,
+        dispenseNow: medicationItems.every((m) => m.dispenseNow) || undefined,
       }
 
       const res = await fetch(`${API_URL}/patients/${patientId}/notes`, {
@@ -927,7 +957,7 @@ export default function NewNotePage() {
                         }`}
                       >
                         <PackageCheck className="w-3.5 h-3.5" />
-                        {item.dispenseNow ? t('clinicalNotes.form.dispensing') : t('clinicalNotes.form.dispenseNow')}
+                        {item.dispenseNow ? t('clinicalNotes.form.dispenseNow') : t('clinicalNotes.form.dispensing')}
                       </button>
                     </div>
                   </div>

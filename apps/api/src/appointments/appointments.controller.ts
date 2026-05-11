@@ -2,10 +2,12 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseUUIDPipe
 import { Request } from 'express'
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger'
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard'
+import { PermissionsGuard, Permissions } from '../auth/guards/permissions.guard'
 import { AppointmentsService } from './appointments.service'
 import { CreateAppointmentDto } from './dto/create-appointment.dto'
 import { UpdateAppointmentDto } from './dto/update-appointment.dto'
 import { ListAppointmentsQueryDto } from './dto/list-appointments-query.dto'
+import { SaveVitalsDto } from './dto/save-vitals.dto'
 
 @ApiTags('appointments')
 @Controller('appointments')
@@ -114,5 +116,31 @@ export class AppointmentsController {
   ) {
     const organizationId = (req as any).user.organizationId
     return this.appointmentsService.getAuditLog(organizationId, id)
+  }
+
+  @Post(':id/vitals')
+  @UseGuards(PermissionsGuard)
+  @Permissions('notes', 'vitals')
+  @ApiOperation({ summary: 'Save vitals for an appointment' })
+  @ApiResponse({ status: 201, description: 'Vitals saved, appointment set to IN_PROGRESS' })
+  async saveVitals(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SaveVitalsDto,
+    @Req() req: Request,
+  ) {
+    const organizationId = (req as any).user.organizationId
+    const userId = (req as any).user.id
+    return this.appointmentsService.saveVitals(organizationId, id, userId, dto)
+  }
+
+  @Get(':id/vitals')
+  @ApiOperation({ summary: 'Get vitals for an appointment' })
+  @ApiResponse({ status: 200, description: 'Vitals data if exists' })
+  async getVitals(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = (req as any).user.organizationId
+    return this.appointmentsService.getVitals(organizationId, id)
   }
 }

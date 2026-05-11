@@ -1,3 +1,4 @@
 export * from './create-appointment.dto'
 export * from './update-appointment.dto'
 export * from './list-appointments-query.dto'
+export * from './save-vitals.dto'

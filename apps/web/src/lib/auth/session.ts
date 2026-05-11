@@ -9,6 +9,7 @@ const AUTH_STORAGE_KEYS = {
   ORG_SLUG: 'sb-org-slug',
   ORG_NAME: 'sb-org-name',
   SPECIALTIES: 'sb-specialties',
+  PERMISSIONS: 'sb-permissions',
 } as const;
 
 export function saveAuthSession(session: LoginResponse): void {
@@ -18,6 +19,9 @@ export function saveAuthSession(session: LoginResponse): void {
     localStorage.setItem(AUTH_STORAGE_KEYS.ROLE, session.user.role || '');
     localStorage.setItem(AUTH_STORAGE_KEYS.EMAIL, session.user.email);
     localStorage.setItem(AUTH_STORAGE_KEYS.ORG_ID, session.user.org_id || '');
+    if (session.user.permissions) {
+      localStorage.setItem(AUTH_STORAGE_KEYS.PERMISSIONS, JSON.stringify(session.user.permissions));
+    }
   }
   if (session.organization) {
     localStorage.setItem(AUTH_STORAGE_KEYS.ORG_ID, session.organization.org_id);

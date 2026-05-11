@@ -4,6 +4,7 @@ import { PrismaService } from '../database/prisma.service'
 import { CreateAppointmentDto } from './dto/create-appointment.dto'
 import { UpdateAppointmentDto } from './dto/update-appointment.dto'
 import { ListAppointmentsQueryDto } from './dto/list-appointments-query.dto'
+import { SaveVitalsDto } from './dto/save-vitals.dto'
 import { AppointmentStatus, AppointmentMode } from '@prisma/client'
 import { MailService } from '../mail/mail.service'
 
@@ -479,6 +480,76 @@ export class AppointmentsService {
       },
       orderBy: { createdAt: 'desc' },
       take: 50,
+    })
+  }
+
+  async saveVitals(organizationId: string, appointmentId: string, userId: string, dto: SaveVitalsDto) {
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id: appointmentId },
+    })
+
+    if (!appointment || appointment.organizationId !== organizationId) {
+      throw new NotFoundException('Appointment not found')
+    }
+
+    if (appointment.status !== 'CONFIRMED') {
+      throw new ConflictException('Vitals can only be taken for CONFIRMED appointments')
+    }
+
+    const bmi = dto.weight && dto.height
+      ? Number((dto.weight / Math.pow(dto.height / 100, 2)).toFixed(2))
+      : undefined
+
+    const vitals = await this.prisma.appointmentVitals.upsert({
+      where: { appointmentId },
+      create: {
+        appointmentId,
+        organizationId,
+        takenById: userId,
+        bloodPressure: dto.bloodPressure,
+        heartRate: dto.heartRate,
+        temperature: dto.temperature,
+        respRate: dto.respRate,
+        oxygenSat: dto.oxygenSat,
+        weight: dto.weight,
+        height: dto.height,
+        bmi,
+        subjective: dto.subjective,
+      },
+      update: {
+        takenById: userId,
+        bloodPressure: dto.bloodPressure,
+        heartRate: dto.heartRate,
+        temperature: dto.temperature,
+        respRate: dto.respRate,
+        oxygenSat: dto.oxygenSat,
+        weight: dto.weight,
+        height: dto.height,
+        bmi,
+        subjective: dto.subjective,
+      },
+    })
+
+    await this.prisma.appointment.update({
+      where: { id: appointmentId },
+      data: { status: 'IN_PROGRESS' },
+    })
+
+    return vitals
+  }
+
+  async getVitals(organizationId: string, appointmentId: string) {
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      select: { organizationId: true },
+    })
+
+    if (!appointment || appointment.organizationId !== organizationId) {
+      throw new NotFoundException('Appointment not found')
+    }
+
+    return this.prisma.appointmentVitals.findUnique({
+      where: { appointmentId },
     })
   }
 }

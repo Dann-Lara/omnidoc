@@ -1,4 +1,5 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Logger, Res, ForbiddenException, UseGuards, Req, Put, Param } from '@nestjs/common';
+import { flattenRolePermissions } from '../lib/permissions';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
@@ -23,6 +24,7 @@ interface LoginResponseCookies {
     last_name: string | null;
     subtype: string | null;
     avatar: string | null;
+    permissions?: Record<string, boolean>;
   };
   organization: {
     org_id: string | null;
@@ -130,10 +132,11 @@ export class AuthController {
       let dbLastName: string | null = null;
       let dbAvatar: string | null = null;
       let dbUserExists = false;
+      let localUser: any = null;
 
       if (supabaseId) {
         this.logger.log(`Looking up user with supabaseId: ${supabaseId}`);
-        const localUser = await this.prisma.user.findUnique({
+        localUser = await this.prisma.user.findUnique({
           where: { supabaseId },
           include: { role: true, organization: true },
         });
@@ -248,6 +251,13 @@ export class AuthController {
         maxAge: data.expires_in * 1000,
       });
 
+      let permissions: Record<string, boolean> | undefined
+      if (localUser?.permissions && typeof localUser.permissions === 'object') {
+        permissions = localUser.permissions as Record<string, boolean>
+      } else if (localUser?.role?.permissions) {
+        permissions = flattenRolePermissions(localUser.role.permissions as string[])
+      }
+
       return {
         user: {
           id: data.user?.id || '',
@@ -258,6 +268,7 @@ export class AuthController {
           last_name: dbLastName || data.user?.user_metadata?.last_name || null,
           subtype: subtype,
           avatar: dbAvatar,
+          permissions,
         },
         organization,
         dashboard_route: dashboardRoute,

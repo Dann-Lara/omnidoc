@@ -68,6 +68,11 @@ interface DispensedRecord {
     batchNumber: string
     costPerBox: number | null
   }
+  dispensedByUser: {
+    id: string
+    firstName: string
+    lastName: string
+  } | null
 }
 
 export default function DispensingHistoryPage() {
@@ -322,7 +327,7 @@ export default function DispensingHistoryPage() {
                             </td>
                             <td className="px-6 py-6 align-top">
                               <div className="text-xs font-semibold text-on-surface">
-                                {record.note?.doctor?.firstName} {record.note?.doctor?.lastName}
+                                {record.dispensedByUser?.firstName} {record.dispensedByUser?.lastName}
                               </div>
                             </td>
                             <td className="px-6 py-6 align-top">

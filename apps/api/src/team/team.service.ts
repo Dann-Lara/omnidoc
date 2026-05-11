@@ -4,6 +4,7 @@ import { PrismaService } from '../database/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { MailService } from '../mail/mail.service';
 import { t } from '@/i18n/translations';
+import { expandPermissions } from '../lib/permissions';
 import { 
   CreateTeamInvitationDto, 
   UpdateTeamMemberDto,
@@ -511,21 +512,4 @@ export class TeamService {
     };
   }
 
-  private flattenPermissions(permissions: Record<string, any>): string[] {
-    const result: string[] = [];
-    
-    for (const [module, perms] of Object.entries(permissions)) {
-      if (typeof perms === 'object' && perms !== null) {
-        for (const [action, enabled] of Object.entries(perms)) {
-          if (enabled) {
-            result.push(`${module}:${action}`);
-          }
-        }
-      } else if (perms === true) {
-        result.push(module);
-      }
-    }
-    
-    return result;
-  }
 }
